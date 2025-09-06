@@ -31,7 +31,10 @@ def get_calendar_service():
             flow = InstalledAppFlow.from_client_secrets_file(
                 "credentials.json", SCOPES
             )
-            creds = flow.run_local_server(port=0)
+            # Use run_console() for command-line environments
+            print("No valid credentials found. Please complete the OAuth flow.")
+            print("A URL will be printed to the console. Please open it in a browser.")
+            creds = flow.run_console()
         # Save the credentials for the next run
         with open("token.json", "w") as token:
             token.write(creds.to_json())

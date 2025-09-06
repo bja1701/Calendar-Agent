@@ -79,12 +79,16 @@ With the setup and configuration complete, you can now run the application.
 1.  **First-Time Run (Authorization):**
     Run the main application file from your terminal:
     ```bash
-    python app.py
+    python3 app.py
     ```
-    -   Your web browser should automatically open a Google login page.
+    -   Since this application is designed to run in a command-line environment, it will use a console-based authentication flow.
+    -   The script will print a long URL to the console. **Copy this entire URL.**
+    -   Paste the URL into a web browser on your local machine.
     -   Log in to the Google account you want the assistant to manage.
     -   Grant the application permission to access your calendar.
-    -   After you approve, you can close the browser tab. The application will create a `token.json` file in the project directory to remember your authorization.
+    -   After you approve, Google will display an **authorization code**. **Copy this code.**
+    -   **Paste the code back into your terminal** where the application is waiting and press Enter.
+    -   The application will then create a `token.json` file to store your credentials. You will only need to do this once.
 
 2.  **Subsequent Runs:**
     For all future runs, the application will use the `token.json` file, so you won't need to log in again. Simply run:
