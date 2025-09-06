@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
+
+# Load environment variables from a .env file before importing other modules
+load_dotenv()
+
 import llm_client
 import calendar_client
 from datetime import datetime
-
-# Load environment variables from a .env file
-load_dotenv()
 
 app = Flask(__name__)
 
