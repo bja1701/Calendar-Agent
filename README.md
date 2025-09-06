@@ -85,8 +85,8 @@ With the setup and configuration complete, you can now run the application.
     -   The script will print a long URL to the console. **Copy this entire URL.**
     -   Paste the URL into a web browser on your local machine.
     -   Log in to the Google account you want the assistant to manage.
-    -   Grant the application permission to access your calendar.
-    -   After you approve, Google will display an **authorization code**. **Copy this code.**
+    -   Grant the application permission to access your calendar by clicking "Allow" or "Continue".
+    -   **Important:** After you grant permission, the next page will show a heading like "Sign in to AI Calendar Assistant Client" and will display the authorization code. It is a long string of characters. **Copy this entire code.**
     -   **Paste the code back into your terminal** where the application is waiting and press Enter.
     -   The application will then create a `token.json` file to store your credentials. You will only need to do this once.
 
