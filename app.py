@@ -41,7 +41,31 @@ def schedule():
     if not all([summary, start_time, end_time]):
         return jsonify({"error": "Missing required event details (summary, start_time, end_time)."}), 400
 
-    # 2. Create the event in Google Calendar
+    # 2. Validate and sanitize the data from the LLM before creating the event
+    try:
+        from datetime import datetime, timedelta
+
+        start_time_dt = datetime.fromisoformat(start_time)
+        end_time_dt = datetime.fromisoformat(end_time)
+
+        # Ensure end_time is after start_time
+        if end_time_dt <= start_time_dt:
+            # Correct it to be 1 hour after the start time if it's not
+            end_time_dt = start_time_dt + timedelta(hours=1)
+            end_time = end_time_dt.isoformat()
+
+    except ValueError:
+        # This catches invalid ISO formats (e.g., hour '24').
+        print(f"Invalid timestamp format from LLM. Correcting to a 1-hour event.")
+        try:
+            start_time_dt = datetime.fromisoformat(start_time)
+            end_time_dt = start_time_dt + timedelta(hours=1)
+            end_time = end_time_dt.isoformat()
+        except ValueError:
+            # If the start_time itself is invalid, we can't proceed.
+            return jsonify({"error": "LLM provided an invalid start_time format. Could not create event."}), 500
+
+    # 3. Create the event in Google Calendar with validated data
     created_event = calendar_client.create_event(summary, start_time, end_time)
 
     if created_event:
