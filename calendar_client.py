@@ -60,6 +60,36 @@ def get_calendar_service():
         return None
 
 
+def get_events_in_range(days_in_future=14):
+    """
+    Fetches all events within a given future range from today.
+    """
+    service = get_calendar_service()
+    if not service:
+        return []
+
+    now = datetime.datetime.utcnow()
+    time_min = now.isoformat() + "Z"
+    time_max = (now + datetime.timedelta(days=days_in_future)).isoformat() + "Z"
+
+    try:
+        events_result = (
+            service.events()
+            .list(
+                calendarId="primary",
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy="startTime",
+            )
+            .execute()
+        )
+        return events_result.get("items", [])
+    except HttpError as error:
+        print(f"An error occurred while fetching events: {error}")
+        return []
+
+
 def get_daily_events():
     """
     Fetches all events for the current day from the user's primary calendar.

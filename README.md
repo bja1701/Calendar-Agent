@@ -6,7 +6,8 @@ The application uses the Gemini 1.5 Flash model to understand your commands and 
 
 ## Features
 
--   **Natural Language Scheduling:** Create calendar events by typing, e.g., "Schedule a meeting with my professor tomorrow at 10am".
+-   **Proactive Study Planning:** Give the assistant a task with a deadline (e.g., "History paper due next Friday"), and it will analyze your calendar for free time and automatically schedule multiple, focused study sessions for you.
+-   **Simple Event Scheduling:** Still supports simple, direct scheduling like "Schedule a meeting with my professor tomorrow at 10am".
 -   **Daily Task Checklist:** Automatically fetches and displays all events from your Google Calendar for the current day.
 -   **Simple Web Interface:** A clean and easy-to-use dashboard to manage your schedule.
 
@@ -101,6 +102,25 @@ With the setup and configuration complete, you can now run the application.
 ### 4. How to Use
 
 1.  Open your web browser and navigate to `http://127.0.0.1:5001`.
-2.  The dashboard will automatically load and display any events you have scheduled for today.
-3.  To schedule a new event, type a command into the input box (e.g., "Data Structures project work from 3pm to 5pm today") and click **Schedule**.
-4.  The task list will automatically refresh after you schedule a new event. You can also manually refresh it by clicking **Refresh Tasks**.
+2.  The dashboard will automatically load and display your checklist for today.
+
+#### Proactive Planning (New Feature)
+
+The assistant's most powerful feature is its ability to be a proactive planner. You can give it high-level tasks with a deadline, and it will analyze your calendar and create a multi-session study plan for you.
+
+-   **Be descriptive:** Tell the assistant what the task is and when the final deadline is.
+-   **Let it work:** The AI will find free slots in your calendar and schedule sessions automatically.
+
+**Good examples for the planner:**
+-   "I have a major history paper due in two weeks on October 20th. Help me schedule time to work on it."
+-   "My calculus midterm is next Friday. Can you schedule 3 study sessions for me before then?"
+-   "Schedule time to work on my final project for my CS101 class. It's due on the last day of the month."
+
+#### Simple Event Scheduling
+
+You can still create simple, one-off events just like before.
+
+-   **Be specific:** Provide the event title, date, and time.
+-   **Example:** "Schedule a meeting with Professor Smith tomorrow from 11am to 11:30am."
+
+After you schedule new events, the daily checklist will refresh automatically. You can also refresh it manually at any time by clicking **Refresh Tasks**.

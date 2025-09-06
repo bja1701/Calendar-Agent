@@ -20,7 +20,7 @@ def index():
 @app.route('/schedule', methods=['POST'])
 def schedule():
     """
-    Receives natural language input, parses it, and creates a calendar event.
+    Receives a high-level task, generates a study plan, and schedules multiple events.
     """
     data = request.get_json()
     text_input = data.get('text')
@@ -28,50 +28,49 @@ def schedule():
     if not text_input:
         return jsonify({"error": "No text provided"}), 400
 
-    # 1. Parse the natural language input using the LLM
-    event_details = llm_client.parse_natural_language(text_input)
+    # 1. Fetch calendar context
+    print("Fetching calendar events to provide context to the planner...")
+    upcoming_events = calendar_client.get_events_in_range(days_in_future=14)
 
-    if not event_details:
-        return jsonify({"error": "Failed to parse event details from text."}), 500
+    # 2. Call the AI planner to generate a study plan
+    print("Sending request to the AI planner...")
+    new_events_plan = llm_client.generate_study_plan(text_input, upcoming_events)
 
-    summary = event_details.get("summary")
-    start_time = event_details.get("start_time")
-    end_time = event_details.get("end_time")
+    if not new_events_plan:
+        return jsonify({"error": "The AI planner could not create a plan from your request."}), 500
 
-    if not all([summary, start_time, end_time]):
-        return jsonify({"error": "Missing required event details (summary, start_time, end_time)."}), 400
+    # 3. Loop through the plan and create events
+    created_count = 0
+    for event_details in new_events_plan:
+        summary = event_details.get("summary")
+        start_time = event_details.get("start_time")
+        end_time = event_details.get("end_time")
 
-    # 2. Validate and sanitize the data from the LLM before creating the event
-    try:
-        from datetime import datetime, timedelta
+        if not all([summary, start_time, end_time]):
+            print(f"Skipping malformed event from LLM: {event_details}")
+            continue
 
-        start_time_dt = datetime.fromisoformat(start_time)
-        end_time_dt = datetime.fromisoformat(end_time)
-
-        # Ensure end_time is after start_time
-        if end_time_dt <= start_time_dt:
-            # Correct it to be 1 hour after the start time if it's not
-            end_time_dt = start_time_dt + timedelta(hours=1)
-            end_time = end_time_dt.isoformat()
-
-    except ValueError:
-        # This catches invalid ISO formats (e.g., hour '24').
-        print(f"Invalid timestamp format from LLM. Correcting to a 1-hour event.")
+        # Validate and sanitize the data from the LLM before creating the event
         try:
+            from datetime import datetime, timedelta
             start_time_dt = datetime.fromisoformat(start_time)
-            end_time_dt = start_time_dt + timedelta(hours=1)
-            end_time = end_time_dt.isoformat()
+            end_time_dt = datetime.fromisoformat(end_time)
+            if end_time_dt <= start_time_dt:
+                end_time_dt = start_time_dt + timedelta(hours=1)
+                end_time = end_time_dt.isoformat()
         except ValueError:
-            # If the start_time itself is invalid, we can't proceed.
-            return jsonify({"error": "LLM provided an invalid start_time format. Could not create event."}), 500
+            print(f"Skipping event with invalid timestamp from LLM: {event_details}")
+            continue
 
-    # 3. Create the event in Google Calendar with validated data
-    created_event = calendar_client.create_event(summary, start_time, end_time)
+        # Create the event
+        created_event = calendar_client.create_event(summary, start_time, end_time)
+        if created_event:
+            created_count += 1
 
-    if created_event:
-        return jsonify({"message": "Event created successfully!", "event": created_event})
+    if created_count > 0:
+        return jsonify({"message": f"Successfully scheduled {created_count} new event(s)!"})
     else:
-        return jsonify({"error": "Failed to create calendar event."}), 500
+        return jsonify({"error": "AI created a plan, but failed to schedule any events."}), 500
 
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
