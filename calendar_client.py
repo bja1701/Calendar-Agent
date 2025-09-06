@@ -31,10 +31,19 @@ def get_calendar_service():
             flow = InstalledAppFlow.from_client_secrets_file(
                 "credentials.json", SCOPES
             )
-            # Use run_console() for command-line environments
-            print("No valid credentials found. Please complete the OAuth flow.")
-            print("A URL will be printed to the console. Please open it in a browser.")
-            creds = flow.run_console()
+            # This is the correct, manual flow for a command-line environment.
+            # 1. Generate the authorization URL.
+            auth_url, _ = flow.authorization_url(prompt="consent")
+
+            print("Please go to this URL to authorize access:")
+            print(auth_url)
+
+            # 2. Have the user enter the authorization code.
+            code = input("Enter the authorization code: ")
+
+            # 3. Exchange the code for credentials.
+            flow.fetch_token(code=code)
+            creds = flow.credentials
         # Save the credentials for the next run
         with open("token.json", "w") as token:
             token.write(creds.to_json())
