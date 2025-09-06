@@ -15,7 +15,7 @@ def generate_study_plan(user_text, calendar_events):
     """
     Uses the Gemini model to act as a proactive planner, creating a study plan.
     """
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
     simplified_events = [
         {
@@ -57,10 +57,6 @@ def generate_study_plan(user_text, calendar_events):
 
     3.  **Conflict Avoidance (CRITICAL RULE):**
         - **This is the most important rule.** You MUST NOT schedule any new event that overlaps with an existing event in the user's calendar. Find an empty slot. Check start and end times carefully.
-
-    4. **Days to not schedule:**
-        - Try to not schedule events on weekends (Saturday and Sunday). If absolutely necessary, schedule only on Saturdays, never on Sundays.
-        - Avoid scheduling events on holidays or during exam periods.
 
     **Output Format:**
     You MUST respond with ONLY a JSON object. This object should contain a single key, "new_events", which is a list of the new event objects you have planned. Each event object in the list must have the following keys:

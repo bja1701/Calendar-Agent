@@ -69,19 +69,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tasks.length === 0) {
                 tasksUl.innerHTML = '<li>No tasks scheduled for today.</li>';
             } else {
-                tasks.forEach(task => {
+                tasks.forEach((task, index) => {
                     const li = document.createElement('li');
 
-                    const summarySpan = document.createElement('span');
-                    summarySpan.className = 'summary';
-                    summarySpan.textContent = task.summary;
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `task-${index}`;
+
+                    const summaryLabel = document.createElement('label');
+                    summaryLabel.htmlFor = `task-${index}`;
+                    summaryLabel.textContent = task.summary;
 
                     const timeSpan = document.createElement('span');
                     timeSpan.className = 'time';
                     timeSpan.textContent = task.start_time;
 
-                    li.appendChild(summarySpan);
+                    const taskContent = document.createElement('div');
+                    taskContent.className = 'task-content';
+                    taskContent.appendChild(checkbox);
+                    taskContent.appendChild(summaryLabel);
+
+                    li.appendChild(taskContent);
                     li.appendChild(timeSpan);
+
+                    // Add click listener to toggle completed state
+                    li.addEventListener('click', (e) => {
+                        // Don't toggle if clicking on a link or button inside the li in the future
+                        if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+
+                        li.classList.toggle('completed');
+                        // Also toggle the checkbox state
+                        const cb = li.querySelector('input[type="checkbox"]');
+                        if (cb) {
+                            // If the click was not on the checkbox itself, sync its state
+                            if (e.target !== cb) {
+                                cb.checked = !cb.checked;
+                            }
+                        }
+                    });
+
                     tasksUl.appendChild(li);
                 });
             }

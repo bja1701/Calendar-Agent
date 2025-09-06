@@ -99,6 +99,24 @@ button:hover {
     justify-content: space-between;
     align-items: center;
     font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.task-list li:hover {
+    background-color: #e0e6e8;
+}
+
+.task-list li .task-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.task-list li input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
 }
 
 .task-list li .time {
@@ -107,6 +125,17 @@ button:hover {
     background-color: #bdc3c7;
     padding: 5px 10px;
     border-radius: 5px;
+}
+
+/* Styling for completed tasks */
+.task-list li.completed {
+    background-color: #e2e8e9;
+    opacity: 0.6;
+}
+
+.task-list li.completed .task-content label {
+    text-decoration: line-through;
+    color: #555;
 }
 
 .status-message {
