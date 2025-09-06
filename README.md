@@ -81,8 +81,10 @@ With the setup and configuration complete, you can now run the application.
     ```bash
     python3 app.py
     ```
-    -   Since this application is designed to run in a command-line environment, it will use a console-based authentication flow.
-    -   The script will print a long URL to the console. **Copy this entire URL.**
+    -   The server will start and wait for requests. It will not print anything immediately.
+    -   Next, open your web browser and navigate to `http://127.0.0.1:5001`.
+    -   The page will attempt to load your tasks. At this point, check your terminal. The application now needs to authenticate and will print the authorization URL.
+    -   **Copy this entire URL from your terminal.**
     -   Paste the URL into a web browser on your local machine.
     -   Log in to the Google account you want the assistant to manage.
     -   Grant the application permission to access your calendar by clicking "Allow" or "Continue".

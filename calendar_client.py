@@ -33,6 +33,10 @@ def get_calendar_service():
             )
             # This is the correct, manual flow for a command-line environment.
             # 1. Generate the authorization URL.
+            # The redirect_uri must be set to 'urn:ietf:wg:oauth:2.0:oob' for the
+            # manual, 'out-of-band' (OOB) flow. This must also be an authorized
+            # redirect URI in your Google Cloud Console project.
+            flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
             auth_url, _ = flow.authorization_url(prompt="consent")
 
             print("Please go to this URL to authorize access:")
