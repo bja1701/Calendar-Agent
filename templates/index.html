@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Academic Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Academic Assistant</h1>
+            <p>Use natural language to schedule events and manage your daily tasks.</p>
+        </header>
+
+        <div class="scheduler">
+            <h2>Schedule a New Event</h2>
+            <div class="input-group">
+                <input type="text" id="event-input" placeholder="e.g., 'Schedule a study session for Math 101 tomorrow at 2 PM'">
+                <button id="schedule-button">Schedule</button>
+            </div>
+            <div id="scheduler-status" class="status-message"></div>
+        </div>
+
+        <div class="task-list">
+            <h2>Today's Checklist</h2>
+            <button id="refresh-tasks-button">Refresh Tasks</button>
+            <ul id="tasks-ul">
+                <!-- Tasks will be dynamically inserted here by JavaScript -->
+            </ul>
+            <div id="tasks-status" class="status-message"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
