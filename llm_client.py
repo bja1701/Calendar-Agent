@@ -17,7 +17,6 @@ def generate_study_plan(user_text, calendar_events):
     """
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # Simplify calendar events for the prompt to save tokens and reduce noise.
     simplified_events = [
         {
             "summary": event.get("summary", "No Title"),
@@ -32,50 +31,38 @@ def generate_study_plan(user_text, calendar_events):
 
     prompt = f"""
     You are a proactive and intelligent academic planner for a college student.
-    Your goal is to create a detailed, multi-session study plan based on a user's request and their existing calendar, then return it as a structured list of new calendar events.
+    Your goal is to create a detailed study plan based on a user's request and their existing calendar, then return it as a structured list of new calendar events.
 
     **Current Time:**
     {now}
 
     **User's Request:**
+    (The user will provide input in the format: "{{Class Name}}\\t{{Due Date}}\\t{{Assignment Name}}")
     "{user_text}"
 
     **User's Existing Calendar for the Next 14 Days:**
     {events_json_string}
 
-    **Your Task:**
-    1.  **Analyze the Request:** Identify the core task and its final deadline (e.g., "History Essay due next Friday").
-    2.  **Analyze the Calendar:** Review the user's existing events to identify blocks of free time. Assume standard sleeping hours (e.g., no events between 11 PM and 8 AM).
-    3.  **Create a Plan:** Break the main task into smaller, actionable study sessions (typically 1-2 hours each).
-    4.  **Schedule Sessions:** Intelligently schedule these sessions in the free time slots leading up to the deadline. Spread them out reasonably. For example, don't schedule three sessions on one day if there are many free days.
-    5.  **Name Events Clearly:** Give each new event a descriptive summary. For example, if the task is "write a research paper," session names could be "Research for paper," "Outline paper," "Draft Section 1," etc.
+    **Decision-Making Rules:**
+
+    1.  **Analyze the Assignment Name:**
+        - If the name includes "Project", "Paper", or "Essay", it's a **complex task**. Schedule one or two 2-hour work sessions.
+        - If the name includes "Homework", "Lab", or "Assignment", it's a **standard task**. Schedule one 1-hour work session.
+        - If the name includes "Exam" or "Midterm", it's a **major assessment**. Schedule at least two separate 2-hour study sessions on different days leading up to the due date.
+        - If the name includes "Quiz", it's a **minor assessment**. Schedule one 45-minute study session, preferably the day before the due date.
+
+    2.  **Scheduling Logic:**
+        - Schedule work sessions on days leading up to the due date.
+        - Give the new events descriptive names (e.g., "Work on Project 1 for EC EN 330", "Study for Quiz 3 - CS 101").
+
+    3.  **Conflict Avoidance (CRITICAL RULE):**
+        - **This is the most important rule.** You MUST NOT schedule any new event that overlaps with an existing event in the user's calendar. Find an empty slot. Check start and end times carefully.
 
     **Output Format:**
     You MUST respond with ONLY a JSON object. This object should contain a single key, "new_events", which is a list of the new event objects you have planned. Each event object in the list must have the following keys:
     - "summary": The descriptive title of the study session.
     - "start_time": The start time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS).
     - "end_time": The end time in ISO 8601 format.
-
-    **Example Response:**
-    {{
-      "new_events": [
-        {{
-          "summary": "Research for History Essay",
-          "start_time": "2025-09-08T14:00:00",
-          "end_time": "2025-09-08T15:30:00"
-        }},
-        {{
-          "summary": "Draft Outline for History Essay",
-          "start_time": "2025-09-09T18:00:00",
-          "end_time": "2025-09-09T19:00:00"
-        }},
-        {{
-          "summary": "Write Introduction for History Essay",
-          "start_time": "2025-09-11T16:00:00",
-          "end_time": "2025-09-11T17:30:00"
-        }}
-      ]
-    }}
     """
 
     try:
