@@ -60,7 +60,7 @@ def get_calendar_service():
         return None
 
 
-def get_events_in_range(days_in_future=14):
+def get_events_in_range(days_in_future=100):
     """
     Fetches all events within a given future range from today.
     """
