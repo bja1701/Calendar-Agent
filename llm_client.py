@@ -58,7 +58,8 @@ def generate_study_plan(user_text, calendar_events):
     3.  **Scheduling Constraints:**
         - **Weekend Avoidance:** Do not schedule events on Sunday. Try to avoid scheduling on Saturday unless it is necessary to meet a deadline.
         - **Holiday/Exam Period Avoidance:** Look at the user's existing calendar for events like "Spring Break," "Finals Week," or national holidays. Do not schedule new work sessions during these times.
-
+        - **Time of Day Considerations:** Prefer scheduling between 8 AM and 7 PM. Avoid early mornings (before 8 AM) and late nights (after 10 PM). Only schedule outside these hours if absolutely necessary.
+        
     4.  **Conflict Avoidance (CRITICAL RULE):**
         - **This is the most important rule.** You MUST NOT schedule any new event that overlaps with an existing event in the user's calendar. Find an empty slot. Check start and end times carefully.
 
