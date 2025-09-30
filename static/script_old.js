@@ -24,14 +24,18 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             events: '/events',
             eventClick: function(info) {
+                // Create a more sophisticated event details popup
                 showEventDetails(info.event);
             },
             eventDidMount: function(info) {
+                // Add custom styling to events
                 info.el.title = `${info.event.title}\n${info.event.start.toLocaleString()}`;
             },
+            // Set the correct timezone and make sure today shows as Wednesday
             timeZone: 'local',
             locale: 'en',
-            firstDay: 0,
+            firstDay: 0, // Sunday = 0, Monday = 1
+            // Force today to be September 9, 2025 (Wednesday)
             now: '2025-09-09',
             validRange: {
                 start: '2025-01-01'
@@ -68,10 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.body.appendChild(modal);
         
+        // Re-initialize lucide icons for the modal
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
         
+        // Close modal when clicking outside
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.remove();
@@ -104,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
     quickActionBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const template = btn.dataset.template;
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
             
             let suggestion = '';
             switch (template) {
@@ -124,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             eventInput.value = suggestion;
             eventInput.focus();
             
+            // Add a subtle animation to the input
             eventInput.style.transform = 'scale(1.02)';
             setTimeout(() => {
                 eventInput.style.transform = 'scale(1)';
@@ -142,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleConflicts = async (result) => {
         const conflicts = result.conflicts;
         
+        // Get AI suggestions for alternatives
         for (const conflict of conflicts) {
             await showConflictResolutionDialog(conflict);
         }
@@ -150,7 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Show enhanced conflict resolution dialog with AI suggestions
     const showConflictResolutionDialog = async (conflict) => {
         const proposed = conflict.proposed_event;
+        const conflictDetails = conflict.conflicts.map(c => 
+            `• ${c.existing_event.summary} (${c.overlap_minutes} min overlap)`
+        ).join('\n');
         
+        // Create a custom dialog
         const dialogHtml = `
             <div class="conflict-dialog" id="conflict-dialog">
                 <h3>⚠️ Scheduling Conflict Detected</h3>
@@ -180,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
+        // Add dialog to page
         const existingDialog = document.getElementById('conflict-dialog');
         if (existingDialog) {
             existingDialog.remove();
@@ -187,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.body.insertAdjacentHTML('beforeend', dialogHtml);
         
+        // Get AI alternatives
         try {
             const response = await fetch('/get_alternatives', {
                 method: 'POST',
@@ -201,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const result = await response.json();
             
+            // Hide loading, show options
             document.querySelector('.loading-alternatives').style.display = 'none';
             document.getElementById('resolution-options').style.display = 'block';
             
@@ -219,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('resolution-options').style.display = 'block';
         }
         
+        // Set up event listeners
         document.getElementById('force-original').onclick = () => {
             forceScheduleEvent(proposed);
             removeConflictDialog();
@@ -230,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // Display alternative time options
+    // Display alternative time options (legacy format for backward compatibility)
     const displayAlternatives = (alternatives, proposedEvent) => {
         const container = document.getElementById('alternatives-container');
         
@@ -244,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         container.innerHTML = alternativeButtons;
         
+        // Add click handlers for alternative buttons
         container.querySelectorAll('.alternative-btn').forEach(btn => {
             btn.onclick = async () => {
                 const alternative = JSON.parse(btn.dataset.alternative);
@@ -260,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let html = '';
         
+        // New event alternatives section
         if (result.new_event_alternatives && result.new_event_alternatives.length > 0) {
             html += `
                 <div class="alternatives-section">
@@ -278,9 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
             
-            html += '</div></div>';
+            html += `
+                    </div>
+                </div>
+            `;
         }
         
+        // Existing event alternatives section
         if (result.existing_event_alternatives && result.existing_event_alternatives.length > 0) {
             html += `
                 <div class="alternatives-section">
@@ -305,11 +330,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
             
-            html += '</div></div>';
+            html += `
+                    </div>
+                </div>
+            `;
         }
         
         container.innerHTML = html;
         
+        // Add click handlers for new event alternatives
         container.querySelectorAll('.new-event-alt').forEach(btn => {
             btn.onclick = async () => {
                 const alternative = JSON.parse(btn.dataset.alternative);
@@ -319,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
         
+        // Add click handlers for existing event alternatives
         container.querySelectorAll('.existing-event-alt').forEach(btn => {
             btn.onclick = async () => {
                 const existingEventId = btn.dataset.existingEventId;
@@ -447,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to display status messages
     const showStatus = (element, message, isSuccess) => {
         element.textContent = message;
-        element.className = 'status-message';
+        element.className = 'status-message'; // Reset classes
         if (isSuccess) {
             element.classList.add('success');
         } else {
@@ -455,8 +485,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- Schedule a new event ---
+    scheduleButton.addEventListener('click', async () => {
+        const text = eventInput.value.trim();
+        if (!text) {
+            showStatus(schedulerStatus, 'Please enter an event description.', false);
+            return;
+        }
+
+        scheduleButton.disabled = true;
+        scheduleButton.textContent = 'Scheduling...';
+        schedulerStatus.style.display = 'none';
+
+        try {
+            const response = await fetch('/schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showStatus(schedulerStatus, 'Event scheduled successfully!', true);
+                eventInput.value = ''; // Clear input field
+                fetchTasks(); // Refresh the task list
+                refreshCalendar(); // Refresh the calendar
+            } else if (response.status === 409) {
+                // Conflict detected
+                handleConflicts(result);
+            } else {
+                showStatus(schedulerStatus, `Error: ${result.error}`, false);
+            }
+        } catch (error) {
+            showStatus(schedulerStatus, `Network error: ${error.message}`, false);
+        } finally {
+            scheduleButton.disabled = false;
+            scheduleButton.textContent = 'Schedule';
+        }
+    });
+
     // --- Fetch and display tasks ---
     const fetchTasks = async () => {
+        // Show loading state
         tasksUl.innerHTML = `
             <li class="task-item loading-task">
                 <div class="task-content">
@@ -472,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/tasks');
             const tasks = await response.json();
 
-            tasksUl.innerHTML = '';
+            tasksUl.innerHTML = ''; // Clear the list
 
             if (tasks.length === 0) {
                 if (emptyTasksDiv) {
@@ -511,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     li.appendChild(checkbox);
                     li.appendChild(taskContent);
 
+                    // Load completion state from localStorage
                     const taskKey = `${task.summary}-${task.start_time}`;
                     const isCompleted = localStorage.getItem(taskKey) === 'true';
                     if (isCompleted) {
@@ -518,15 +592,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         checkbox.checked = true;
                     }
 
+                    // Add click listener to toggle completed state
                     li.addEventListener('click', (e) => {
+                        // Don't toggle if clicking on a link or button inside the li
                         if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
 
                         li.classList.toggle('completed');
+                        // Also toggle the checkbox state
                         const cb = li.querySelector('input[type="checkbox"]');
                         if (cb) {
+                            // If the click was not on the checkbox itself, sync its state
                             if (e.target !== cb) {
                                 cb.checked = !cb.checked;
                             }
+                            // Save state to localStorage
                             const completed = cb.checked;
                             localStorage.setItem(taskKey, completed.toString());
                         }
@@ -537,66 +616,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             showStatus(tasksStatus, `Error fetching tasks: ${error.message}`, false);
-            tasksUl.innerHTML = '';
+            tasksUl.innerHTML = ''; // Clear loading message
             updateEventCount(0);
         }
     };
+                        // Also toggle the checkbox state
+                        const cb = li.querySelector('input[type="checkbox"]');
+                        if (cb) {
+                            // If the click was not on the checkbox itself, sync its state
+                            if (e.target !== cb) {
+                                cb.checked = !cb.checked;
+                            }
+                            // Save state to localStorage
+                            const completed = cb.checked;
+                            localStorage.setItem(taskKey, completed.toString());
+                        }
+                    });
 
-    // --- Schedule a new event ---
-    scheduleButton.addEventListener('click', async () => {
-        const text = eventInput.value.trim();
-        if (!text) {
-            showStatus(schedulerStatus, 'Please enter an event description.', false);
-            return;
-        }
-
-        scheduleButton.disabled = true;
-        scheduleButton.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Scheduling...';
-        schedulerStatus.style.display = 'none';
-
-        try {
-            const response = await fetch('/schedule', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text: text }),
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showStatus(schedulerStatus, 'Event scheduled successfully!', true);
-                eventInput.value = '';
-                fetchTasks();
-                refreshCalendar();
-            } else if (response.status === 409) {
-                handleConflicts(result);
-            } else {
-                showStatus(schedulerStatus, `Error: ${result.error}`, false);
+                    tasksUl.appendChild(li);
+                });
             }
         } catch (error) {
-            showStatus(schedulerStatus, `Network error: ${error.message}`, false);
-        } finally {
-            scheduleButton.disabled = false;
-            scheduleButton.innerHTML = '<span class="btn-text">Schedule</span><i data-lucide="sparkles" class="btn-icon"></i>';
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+            showStatus(tasksStatus, `Error fetching tasks: ${error.message}`, false);
+            tasksUl.innerHTML = ''; // Clear loading message
+            updateEventCount(0);
         }
-    });
+    };
 
     // --- Event Listeners ---
     refreshTasksButton.addEventListener('click', () => {
         fetchTasks();
         refreshCalendar();
-    });
-
-    // Enter key support for input
-    eventInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            scheduleButton.click();
-        }
     });
 
     // Initialize calendar and fetch tasks on initial page load

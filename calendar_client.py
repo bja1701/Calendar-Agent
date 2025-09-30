@@ -1,5 +1,6 @@
 import datetime
 import os.path
+import pytz  # NEW: Import for time zone handling
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -60,7 +61,17 @@ def get_calendar_service():
         return None
 
 
-def get_events_in_range(days_in_future=100):
+def get_primary_calendar_timezone(service):
+    """Fetch the time zone of the primary calendar."""
+    try:
+        calendar = service.calendars().get(calendarId="primary").execute()
+        return calendar.get("timeZone", "UTC")
+    except HttpError as error:
+        print(f"Error fetching time zone: {error}")
+        return "UTC"
+
+
+def get_events_in_range(days_in_future=30):
     """
     Fetches all events within a given future range from today.
     """
@@ -98,12 +109,18 @@ def get_daily_events():
     if not service:
         return []
 
-    # 'Z' indicates UTC time
-    now = datetime.datetime.utcnow()
-    time_min = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
-    time_max = now.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat() + "Z"
+    # Get the user's time zone
+    timezone_str = get_primary_calendar_timezone(service)
+    user_tz = pytz.timezone(timezone_str)
 
-    print(f"Getting events for today from {time_min} to {time_max}")
+    # Get current time in user's time zone
+    now = datetime.datetime.now(user_tz)
+
+    # Set start of day (00:00) and end of day (23:59:59.999999) in user's time zone
+    time_min = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    time_max = now.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+
+    print(f"Getting events for today from {time_min} to {time_max} in {timezone_str}")
 
     try:
         events_result = (
@@ -137,10 +154,13 @@ def create_event(summary, start_time, end_time, timezone="UTC"):
     if not service:
         return None
 
+    # Fetch the actual time zone of the primary calendar
+    actual_timezone = get_primary_calendar_timezone(service)
+
     event = {
         "summary": summary,
-        "start": {"dateTime": start_time, "timeZone": timezone},
-        "end": {"dateTime": end_time, "timeZone": timezone},
+        "start": {"dateTime": start_time, "timeZone": actual_timezone},
+        "end": {"dateTime": end_time, "timeZone": actual_timezone},
     }
 
     try:
@@ -153,4 +173,36 @@ def create_event(summary, start_time, end_time, timezone="UTC"):
         return created_event
     except HttpError as error:
         print(f"An error occurred: {error}")
+        return None
+
+
+def update_event(event_id, new_start_time, new_end_time):
+    """
+    Updates an existing event with new start and end times.
+    """
+    service = get_calendar_service()
+    if not service:
+        return None
+
+    # Fetch the actual time zone of the primary calendar
+    actual_timezone = get_primary_calendar_timezone(service)
+
+    try:
+        # First, get the existing event to preserve other details
+        existing_event = service.events().get(calendarId="primary", eventId=event_id).execute()
+        
+        # Update only the start and end times
+        existing_event['start'] = {"dateTime": new_start_time, "timeZone": actual_timezone}
+        existing_event['end'] = {"dateTime": new_end_time, "timeZone": actual_timezone}
+        
+        # Update the event
+        updated_event = (
+            service.events()
+            .update(calendarId="primary", eventId=event_id, body=existing_event)
+            .execute()
+        )
+        print(f"Event updated: {updated_event.get('htmlLink')}")
+        return updated_event
+    except HttpError as error:
+        print(f"An error occurred while updating event: {error}")
         return None

@@ -5,33 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Academic Assistant</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>AI Academic Assistant</h1>
-            <p>Use natural language to schedule events and manage your daily tasks.</p>
-        </header>
-
-        <div class="scheduler">
-            <h2>Schedule a New Event</h2>
-            <div class="input-group">
-                <input type="text" id="event-input" placeholder="e.g., 'Schedule a study session for Math 101 tomorrow at 2 PM'">
-                <button id="schedule-button">Schedule</button>
+    <!-- Background Elements -->
+    <div class="bg-overlay"></div>
+    <div class="bg-grid"></div>
+    
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-icon">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <span class="brand-text">AI Academic Assistant</span>
             </div>
-            <div id="scheduler-status" class="status-message"></div>
+            <div class="nav-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Today's Events</span>
+                    <span class="stat-value" id="event-count">0</span>
+                </div>
+                <div class="status-indicator" id="connection-status">
+                    <i data-lucide="wifi"></i>
+                </div>
+            </div>
         </div>
+    </nav>
 
-        <div class="task-list">
-            <h2>Today's Checklist</h2>
-            <button id="refresh-tasks-button">Refresh Tasks</button>
-            <ul id="tasks-ul">
-                <!-- Tasks will be dynamically inserted here by JavaScript -->
-            </ul>
-            <div id="tasks-status" class="status-message"></div>
+    <div class="main-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">Smart Scheduling</span>
+                    <span class="hero-subtitle">powered by AI</span>
+                </h1>
+                <p class="hero-description">
+                    Use natural language to schedule events, detect conflicts, and get intelligent suggestions for optimal time management.
+                </p>
+            </div>
+        </section>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Scheduler Card -->
+            <div class="card scheduler-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="calendar-plus"></i>
+                        <span>Schedule New Event</span>
+                    </div>
+                    <div class="card-badge">AI-Powered</div>
+                </div>
+                <div class="card-content">
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <i data-lucide="message-circle" class="input-icon"></i>
+                            <input type="text" 
+                                   id="event-input" 
+                                   class="smart-input"
+                                   placeholder="Try: 'Schedule a Math study session tomorrow at 2 PM'"
+                                   autocomplete="off">
+                        </div>
+                        <button id="schedule-button" class="primary-btn">
+                            <span class="btn-text">Schedule</span>
+                            <i data-lucide="sparkles" class="btn-icon"></i>
+                        </button>
+                    </div>
+                    <div id="scheduler-status" class="status-message"></div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <h4 class="quick-actions-title">Quick Actions</h4>
+                        <div class="quick-actions-grid">
+                            <button class="quick-action-btn" data-template="study session">
+                                <i data-lucide="book-open"></i>
+                                <span>Study Session</span>
+                            </button>
+                            <button class="quick-action-btn" data-template="meeting">
+                                <i data-lucide="users"></i>
+                                <span>Meeting</span>
+                            </button>
+                            <button class="quick-action-btn" data-template="exam">
+                                <i data-lucide="graduation-cap"></i>
+                                <span>Exam</span>
+                            </button>
+                            <button class="quick-action-btn" data-template="assignment">
+                                <i data-lucide="file-text"></i>
+                                <span>Assignment</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Card -->
+            <div class="card calendar-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="calendar-days"></i>
+                        <span>Calendar View</span>
+                    </div>
+                    <div class="calendar-controls">
+                        <button class="icon-btn" id="calendar-refresh" title="Refresh Calendar">
+                            <i data-lucide="refresh-cw"></i>
+                        </button>
+                        <button class="icon-btn" id="calendar-today" title="Go to Today">
+                            <i data-lucide="calendar-check"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div id="calendar" class="calendar-wrapper"></div>
+                </div>
+            </div>
+
+            <!-- Tasks Card -->
+            <div class="card tasks-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="check-square"></i>
+                        <span>Today's Agenda</span>
+                    </div>
+                    <button id="refresh-tasks-button" class="secondary-btn">
+                        <i data-lucide="refresh-cw"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <div class="tasks-container">
+                        <ul id="tasks-ul" class="tasks-list">
+                            <!-- Tasks will be dynamically inserted here -->
+                        </ul>
+                        <div id="tasks-status" class="status-message"></div>
+                        <div class="empty-state" id="empty-tasks" style="display: none;">
+                            <i data-lucide="calendar-x"></i>
+                            <h3>No events scheduled for today</h3>
+                            <p>Schedule your first event using the AI assistant above.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    
+    <!-- Initialize Lucide Icons -->
+    <script>lucide.createIcons();</script>
 </body>
 </html>
