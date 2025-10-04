@@ -3,22 +3,46 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.py[cod]
+*$py.class
 
 # Virtual Environment
 Academic_Calendar_venv/
 venv/
 env/
+ENV/
 
-# Secrets and Credentials
+# Secrets and Credentials (NEVER commit these!)
 token.json
 credentials.json
+credentials_old.json
 .env
+*.key
+
+# User Data (generated at runtime)
+users.json
+sessions.json
+tasks_status.json
+duration_feedback.json
 
 # IDE and OS files
 .vscode/
 .idea/
 *.DS_Store
+.vs/
+*.swp
+*.swo
+*~
 
-# Docker self host
-docker-compose.yaml
-Dockerfile
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.old
+
+# PowerShell scripts (local development)
+*.ps1
+
+# Docker (keep in repo for deployment)
+# docker-compose.yaml
+# Dockerfile

@@ -1,0 +1,18 @@
+services:
+  academic-assistant:
+    build: .
+    container_name: academic-assistant
+    restart: unless-stopped
+    # PORTS REMOVED: No longer need to expose the port to the host machine.
+    ports:
+      - "5001:5001"
+    volumes:
+      - .:/app
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks: # Add this section
+      - cloudflare-net
+
+networks: # And this section
+  cloudflare-net:
+    external: true

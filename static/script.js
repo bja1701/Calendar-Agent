@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initializeCalendar = () => {
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
+            initialDate: new Date(), // Start at today's date
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -31,13 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             timeZone: 'local',
             locale: 'en',
-            firstDay: 0,
-            now: '2025-09-09',
-            validRange: {
-                start: '2025-01-01'
-            },
+            firstDay: 0, // Sunday
+            nowIndicator: true, // Show current time indicator
+            scrollTime: '08:00:00', // Start week/day view at 8am
+            slotMinTime: '06:00:00', // Show from 6am
+            slotMaxTime: '23:00:00', // Show until 11pm
             height: 'auto',
-            aspectRatio: 1.35
+            aspectRatio: 1.35,
+            weekNumbers: true, // Show week numbers
+            navLinks: true, // Click day/week to navigate
+            editable: false, // Disable drag-and-drop for now
+            selectable: false
         });
         calendar.render();
     };
@@ -518,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStatus(schedulerStatus, result.message, true);
                 eventInput.value = '';
                 fetchTasks();
-                refreshCalendar();
+                setTimeout(() => refreshCalendar(), 500);
             } else {
                 showStatus(schedulerStatus, `Error: ${result.error}`, false);
             }
@@ -544,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStatus(schedulerStatus, result.message, true);
                 eventInput.value = '';
                 fetchTasks();
-                refreshCalendar();
+                setTimeout(() => refreshCalendar(), 500);
             } else {
                 showStatus(schedulerStatus, `Error: ${result.error}`, false);
             }
@@ -680,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStatus(schedulerStatus, result.message, true);
                 eventInput.value = '';
                 fetchTasks();
-                refreshCalendar();
+                setTimeout(() => refreshCalendar(), 500);
                 removeConflictDialog();
             } else {
                 // Handle partial success (207 status)
@@ -689,7 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showStatus(schedulerStatus, message, result.created_count > 0);
                     if (result.created_count > 0) {
                         fetchTasks();
-                        refreshCalendar();
+                        setTimeout(() => refreshCalendar(), 500);
                     }
                     removeConflictDialog();
                 } else {
@@ -736,14 +741,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Function to display status messages
+    // Function to display status messages with enhanced animations
     const showStatus = (element, message, isSuccess) => {
+        // Remove existing status
+        element.style.display = 'none';
+        element.classList.remove('success', 'error', 'warning');
+        
+        // Set message and class
         element.textContent = message;
         element.className = 'status-message';
         if (isSuccess) {
             element.classList.add('success');
         } else {
             element.classList.add('error');
+        }
+        
+        // Trigger reflow to restart animation
+        void element.offsetWidth;
+        
+        // Show with animation
+        element.style.display = 'flex';
+        
+        // Auto-hide success messages after 5 seconds
+        if (isSuccess) {
+            setTimeout(() => {
+                element.style.animation = 'fadeOut 0.5s ease-out forwards';
+                setTimeout(() => {
+                    element.style.display = 'none';
+                    element.style.animation = '';
+                }, 500);
+            }, 5000);
         }
     };
 
@@ -834,6 +861,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Show scheduling overlay
+    const showSchedulingOverlay = () => {
+        const overlay = document.createElement('div');
+        overlay.className = 'scheduling-overlay';
+        overlay.id = 'scheduling-overlay';
+        overlay.innerHTML = `
+            <div class="scheduling-content">
+                <div class="scheduling-icon">
+                    <div class="scheduling-spinner"></div>
+                    <div class="scheduling-sparkles">✨</div>
+                </div>
+                <div class="scheduling-text">
+                    <div class="scheduling-title">Scheduling Your Event</div>
+                    <div class="scheduling-subtitle">AI is finding the perfect time...</div>
+                </div>
+                <div class="scheduling-progress">
+                    <div class="scheduling-progress-bar"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    };
+
+    const hideSchedulingOverlay = () => {
+        const overlay = document.getElementById('scheduling-overlay');
+        if (overlay) {
+            overlay.style.animation = 'fadeOut 0.3s ease-out forwards';
+            setTimeout(() => overlay.remove(), 300);
+        }
+    };
+
     // --- Schedule a new event ---
     scheduleButton.addEventListener('click', async () => {
         const text = eventInput.value.trim();
@@ -843,8 +901,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         scheduleButton.disabled = true;
+        scheduleButton.classList.add('loading');
         scheduleButton.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Scheduling...';
         schedulerStatus.style.display = 'none';
+        
+        // Show the fancy loading overlay
+        showSchedulingOverlay();
 
         try {
             const response = await fetch('/schedule', {
@@ -856,21 +918,32 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
+            
+            // Hide overlay after a brief moment to show completion
+            setTimeout(() => hideSchedulingOverlay(), 300);
 
             if (response.ok) {
-                showStatus(schedulerStatus, 'Event scheduled successfully!', true);
+                showStatus(schedulerStatus, '🎉 Event scheduled successfully!', true);
                 eventInput.value = '';
+                
+                // Add success animation to input
+                eventInput.style.animation = 'successFlash 0.6s ease-out';
+                setTimeout(() => eventInput.style.animation = '', 600);
+                
+                // Refresh tasks and calendar with a small delay to ensure backend is updated
                 fetchTasks();
-                refreshCalendar();
+                setTimeout(() => refreshCalendar(), 500);
             } else if (response.status === 409) {
                 handleConflicts(result);
             } else {
                 showStatus(schedulerStatus, `Error: ${result.error}`, false);
             }
         } catch (error) {
+            hideSchedulingOverlay();
             showStatus(schedulerStatus, `Network error: ${error.message}`, false);
         } finally {
             scheduleButton.disabled = false;
+            scheduleButton.classList.remove('loading');
             scheduleButton.innerHTML = '<span class="btn-text">Schedule</span><i data-lucide="sparkles" class="btn-icon"></i>';
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -890,6 +963,235 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleButton.click();
         }
     });
+
+    // --- Intelligent Delete System ---
+    const deleteInput = document.getElementById('delete-input');
+    const deleteButton = document.getElementById('delete-button');
+    const deleteStatus = document.getElementById('delete-status');
+
+    if (deleteButton && deleteInput) {
+        deleteButton.addEventListener('click', async () => {
+            const query = deleteInput.value.trim();
+            if (!query) {
+                showStatus(deleteStatus, 'Please enter a delete query.', false);
+                return;
+            }
+
+            // Show loading dialog
+            const loadingDialog = document.createElement('div');
+            loadingDialog.className = 'confirmation-modal';
+            loadingDialog.innerHTML = `
+                <div class="confirmation-content">
+                    <div class="confirmation-icon warning">
+                        <i data-lucide="search"></i>
+                    </div>
+                    <h3>AI is searching for events...</h3>
+                    <p>Analyzing your calendar to find matching events...</p>
+                    <div class="loading-spinner" style="margin: 1rem auto;"></div>
+                </div>
+            `;
+            document.body.appendChild(loadingDialog);
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            deleteButton.disabled = true;
+            deleteButton.classList.add('loading');
+            const originalText = deleteButton.innerHTML;
+            deleteButton.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Searching...';
+
+            try {
+                // STEP 1: Find matching events
+                const response = await fetch('/intelligent_delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query }),
+                });
+
+                const result = await response.json();
+
+                // Remove loading dialog
+                loadingDialog.remove();
+
+                if (response.ok) {
+                    if (result.requires_confirmation && result.matches && result.matches.length > 0) {
+                        // STEP 2: Show confirmation dialog with matched events (with checkboxes)
+                        const confirmDialog = document.createElement('div');
+                        confirmDialog.className = 'confirmation-modal';
+                        confirmDialog.innerHTML = `
+                            <div class="confirmation-content">
+                                <div class="confirmation-icon warning">
+                                    <i data-lucide="alert-triangle"></i>
+                                </div>
+                                <h3>Confirm Deletion</h3>
+                                <p class="reasoning"><strong>AI Analysis:</strong> ${result.reasoning}</p>
+                                <div class="deleted-events-list">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                        <strong>Select events to delete:</strong>
+                                        <button class="select-all-btn" id="select-all-btn" style="font-size: 0.85rem; padding: 0.25rem 0.5rem;">
+                                            Select All
+                                        </button>
+                                    </div>
+                                    <ul class="event-checkbox-list">
+                                        ${result.matches.map((eventId, index) => `
+                                            <li class="event-checkbox-item">
+                                                <label>
+                                                    <input type="checkbox" class="event-checkbox" data-event-id="${eventId}" checked>
+                                                    <span>${result.event_summaries[index]}</span>
+                                                </label>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                                <p class="warning-text" style="color: #dc3545; margin-top: 1rem;">⚠️ This action cannot be undone!</p>
+                                <div class="confirmation-actions">
+                                    <button class="cancel-btn" id="cancel-delete-btn">
+                                        <i data-lucide="x"></i>
+                                        Cancel
+                                    </button>
+                                    <button class="confirm-delete-btn" id="confirm-delete-btn">
+                                        <i data-lucide="trash-2"></i>
+                                        Delete <span id="selected-count">${result.matches.length}</span> Event(s)
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(confirmDialog);
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+
+                        // Handle select all / deselect all
+                        const selectAllBtn = document.getElementById('select-all-btn');
+                        const checkboxes = confirmDialog.querySelectorAll('.event-checkbox');
+                        const selectedCountSpan = document.getElementById('selected-count');
+                        
+                        const updateCount = () => {
+                            const checkedCount = confirmDialog.querySelectorAll('.event-checkbox:checked').length;
+                            selectedCountSpan.textContent = checkedCount;
+                            document.getElementById('confirm-delete-btn').disabled = checkedCount === 0;
+                            
+                            // Update button text based on state
+                            const allChecked = checkedCount === checkboxes.length;
+                            selectAllBtn.textContent = allChecked ? 'Deselect All' : 'Select All';
+                        };
+
+                        selectAllBtn.addEventListener('click', () => {
+                            const allChecked = confirmDialog.querySelectorAll('.event-checkbox:checked').length === checkboxes.length;
+                            checkboxes.forEach(cb => cb.checked = !allChecked);
+                            updateCount();
+                        });
+
+                        checkboxes.forEach(cb => {
+                            cb.addEventListener('change', updateCount);
+                        });
+
+                        // Handle cancel
+                        document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+                            confirmDialog.remove();
+                            showStatus(deleteStatus, 'Deletion cancelled.', false);
+                        });
+
+                        // Handle confirmation
+                        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+                            const confirmBtn = document.getElementById('confirm-delete-btn');
+                            confirmBtn.disabled = true;
+                            confirmBtn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Deleting...';
+                            if (typeof lucide !== 'undefined') {
+                                lucide.createIcons();
+                            }
+
+                            // Get only checked event IDs
+                            const selectedEventIds = Array.from(confirmDialog.querySelectorAll('.event-checkbox:checked'))
+                                .map(cb => cb.getAttribute('data-event-id'));
+
+                            if (selectedEventIds.length === 0) {
+                                confirmDialog.remove();
+                                showStatus(deleteStatus, 'No events selected for deletion.', false);
+                                return;
+                            }
+
+                            try {
+                                // STEP 3: Actually delete the selected events
+                                const deleteResponse = await fetch('/intelligent_delete', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ 
+                                        query: query,
+                                        confirm: true,
+                                        event_ids: selectedEventIds 
+                                    }),
+                                });
+
+                                const deleteResult = await deleteResponse.json();
+
+                                confirmDialog.remove();
+
+                                if (deleteResponse.ok && deleteResult.confirmed) {
+                                    // Show success dialog
+                                    const successDialog = document.createElement('div');
+                                    successDialog.className = 'confirmation-modal';
+                                    successDialog.innerHTML = `
+                                        <div class="confirmation-content">
+                                            <div class="confirmation-icon success">
+                                                <i data-lucide="check-circle"></i>
+                                            </div>
+                                            <h3>Successfully Deleted ${deleteResult.deleted_count} Event(s)</h3>
+                                            <p style="color: #28a745;">✅ Events have been removed from your calendar.</p>
+                                            <button class="primary-btn" onclick="this.parentElement.parentElement.remove()">
+                                                Close
+                                            </button>
+                                        </div>
+                                    `;
+                                    document.body.appendChild(successDialog);
+                                    if (typeof lucide !== 'undefined') {
+                                        lucide.createIcons();
+                                    }
+
+                                    showStatus(deleteStatus, deleteResult.message, true);
+                                    deleteInput.value = '';
+                                    fetchTasks();
+                                    setTimeout(() => refreshCalendar(), 500);
+                                } else {
+                                    showStatus(deleteStatus, `Error: ${deleteResult.error || 'Failed to delete events'}`, false);
+                                }
+                            } catch (error) {
+                                confirmDialog.remove();
+                                showStatus(deleteStatus, `Error deleting events: ${error.message}`, false);
+                            }
+                        });
+
+                    } else {
+                        // No matches found
+                        showStatus(deleteStatus, result.message || 'No events found matching your criteria.', false);
+                    }
+                } else {
+                    showStatus(deleteStatus, `Error: ${result.error}`, false);
+                }
+            } catch (error) {
+                loadingDialog.remove();
+                showStatus(deleteStatus, `Network error: ${error.message}`, false);
+            } finally {
+                deleteButton.disabled = false;
+                deleteButton.classList.remove('loading');
+                deleteButton.innerHTML = originalText;
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        });
+
+        // Enter key support for delete input
+        deleteInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                deleteButton.click();
+            }
+        });
+    }
 
     // --- Feedback System ---
     console.log('🔍 Initializing Feedback System...');

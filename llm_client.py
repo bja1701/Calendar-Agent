@@ -337,3 +337,18 @@ def suggest_alternative_times(proposed_event, conflicting_events, calendar_event
         print(f"Error generating alternative times: {e}")
         print(f"Raw response was: {response.text}")
         return {"new_event_alternatives": [], "existing_event_alternatives": []}
+
+
+def generate_text(prompt):
+    """
+    Generic text generation function for simple prompts.
+    Returns the raw text response from Gemini.
+    """
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Error generating text: {e}")
+        raise

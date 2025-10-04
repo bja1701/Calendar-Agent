@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from dotenv import load_dotenv
 from cachetools import cached, TTLCache  # NEW: Import for caching
+from werkzeug.middleware.proxy_fix import ProxyFix
 import secrets
 import os
 from google_auth_oauthlib.flow import Flow
@@ -20,9 +21,16 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_urlsafe(32))
 
+# Fix for running behind a proxy (Cloudflare Tunnel)
+# This tells Flask to trust the X-Forwarded-* headers from the proxy
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 # OAuth Configuration
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Allow HTTP for local development
 GOOGLE_CLIENT_SECRETS_FILE = "credentials.json"
+
+# Set preferred URL scheme for external URLs (fixes Cloudflare proxy issue)
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 # NEW: Define a cache with max size 100 and TTL of 24 hours (86400 seconds) for daily updates
 cache = TTLCache(maxsize=100, ttl=86400)
@@ -107,21 +115,37 @@ def google_auth():
     Initiate Google OAuth flow
     """
     try:
+        # Define scopes for user authentication AND calendar access
+        scopes = [
+            'openid',
+            'https://www.googleapis.com/auth/userinfo.email', 
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/calendar'  # Add calendar access
+        ]
+        
+        # Generate redirect URI
+        redirect_uri = url_for('google_callback', _external=True)
+        print(f"🔍 DEBUG: Generated redirect_uri: {redirect_uri}")
+        print(f"🔍 DEBUG: Request URL: {request.url}")
+        print(f"🔍 DEBUG: Request host: {request.host}")
+        print(f"🔍 DEBUG: Scopes: {scopes}")
+        
         # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow
         flow = Flow.from_client_secrets_file(
             GOOGLE_CLIENT_SECRETS_FILE,
-            scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 
-                    'https://www.googleapis.com/auth/userinfo.profile'],
-            redirect_uri=url_for('google_callback', _external=True)
+            scopes=scopes,
+            redirect_uri=redirect_uri
         )
         
         authorization_url, state = flow.authorization_url(
             access_type='offline',
-            include_granted_scopes='true'
+            include_granted_scopes='false',  # Changed to false to prevent scope conflicts
+            prompt='consent'  # Force re-consent to get refresh_token
         )
         
-        # Store the state in session to verify the callback
+        # Store the state and scopes in session to verify the callback
         session['oauth_state'] = state
+        session['oauth_scopes'] = scopes
         
         return redirect(authorization_url)
     except Exception as e:
@@ -139,11 +163,22 @@ def google_callback():
         if not state:
             return render_template('login.html', error='Invalid OAuth state')
         
+        # Get the scopes from session to ensure consistency
+        scopes = session.get('oauth_scopes', [
+            'openid',
+            'https://www.googleapis.com/auth/userinfo.email', 
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/calendar'
+        ])
+        
+        print(f"🔍 DEBUG Callback - State: {state}")
+        print(f"🔍 DEBUG Callback - Scopes: {scopes}")
+        print(f"🔍 DEBUG Callback - Request URL: {request.url}")
+        
         # Create flow instance with the same configuration
         flow = Flow.from_client_secrets_file(
             GOOGLE_CLIENT_SECRETS_FILE,
-            scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 
-                    'https://www.googleapis.com/auth/userinfo.profile'],
+            scopes=scopes,
             state=state,
             redirect_uri=url_for('google_callback', _external=True)
         )
@@ -172,6 +207,11 @@ def google_callback():
         if not email:
             return render_template('login.html', error='Could not retrieve email from Google account')
         
+        # Save calendar credentials to token.json for calendar_client.py to use
+        with open('token.json', 'w') as token_file:
+            token_file.write(credentials.to_json())
+        print(f"✅ Saved calendar credentials to token.json")
+        
         # Check if user exists, if not create them
         users = auth.load_users()
         if email not in users:
@@ -188,13 +228,18 @@ def google_callback():
         session_token, expiry = auth.create_session(email, remember_me=True)  # OAuth users get 30-day sessions
         session['session_token'] = session_token
         
-        # Clear OAuth state
+        # Clear OAuth state and scopes to prevent conflicts
         session.pop('oauth_state', None)
+        session.pop('oauth_scopes', None)
+        
+        print(f"✅ OAuth successful for: {email}")
         
         return redirect(url_for('index'))
         
     except Exception as e:
-        print(f"OAuth callback error: {e}")
+        print(f"❌ OAuth callback error: {e}")
+        import traceback
+        traceback.print_exc()
         return render_template('login.html', error=f'Authentication failed: {str(e)}')
 
 @app.route('/')
@@ -862,6 +907,126 @@ def clear_feedback():
     
     duration_feedback.save_feedback(feedback)
     return jsonify({"message": message, "feedback": feedback})
+
+
+@app.route('/intelligent_delete', methods=['POST'])
+@login_required
+def intelligent_delete():
+    """
+    Use AI to find events based on natural language query.
+    Two-step process: first analyze and return matches, then confirm deletion.
+    """
+    data = request.get_json()
+    query = data.get('query', '').strip()
+    confirm = data.get('confirm', False)  # Whether user confirmed deletion
+    event_ids = data.get('event_ids', [])  # IDs to delete (sent on confirmation)
+    
+    if not query and not confirm:
+        return jsonify({"error": "Please provide a delete query"}), 400
+    
+    try:
+        # STEP 2: User confirmed - actually delete the events
+        if confirm and event_ids:
+            deleted_count = 0
+            failed_count = 0
+            
+            for event_id in event_ids:
+                success = calendar_client.delete_event(event_id)
+                if success:
+                    deleted_count += 1
+                else:
+                    failed_count += 1
+            
+            # Clear cache
+            cache.clear()
+            
+            return jsonify({
+                "message": f"Successfully deleted {deleted_count} event(s)",
+                "deleted_count": deleted_count,
+                "failed_count": failed_count,
+                "confirmed": True
+            })
+        
+        # STEP 1: Analyze query and find matching events
+        events = calendar_client.get_events_in_range(days_in_future=90)
+        
+        if not events:
+            return jsonify({
+                "message": "No events found to delete", 
+                "matches": [],
+                "reasoning": "Your calendar has no upcoming events."
+            })
+        
+        # Create a summary of events for the LLM
+        events_summary = []
+        for event in events:
+            event_info = {
+                "id": event.get('id'),
+                "summary": event.get('summary', 'Untitled'),
+                "start": event.get('start', {}).get('dateTime', event.get('start', {}).get('date', '')),
+                "end": event.get('end', {}).get('dateTime', event.get('end', {}).get('date', '')),
+                "description": event.get('description', '')
+            }
+            events_summary.append(event_info)
+        
+        # Ask LLM to identify which events match the delete criteria
+        prompt = f"""You are helping a user delete calendar events based on their request.
+
+User's delete request: "{query}"
+
+Here are all their upcoming events:
+{json.dumps(events_summary, indent=2)}
+
+Analyze the user's request and identify which event IDs should be deleted. Consider:
+- Keywords in event titles/descriptions
+- Time ranges mentioned
+- Event types or categories
+- Be conservative - only delete events that clearly match the criteria
+
+Respond with a JSON object:
+{{
+    "event_ids": ["id1", "id2", ...],
+    "reasoning": "Brief explanation of why these events were selected",
+    "event_summaries": ["Event 1 title", "Event 2 title", ...]
+}}
+
+If no events match, return empty event_ids array.
+"""
+        
+        response = llm_client.generate_text(prompt)
+        
+        # Parse LLM response
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', response)
+        if not json_match:
+            return jsonify({"error": "Could not understand the delete request"}), 400
+        
+        result = json.loads(json_match.group())
+        matched_event_ids = result.get('event_ids', [])
+        reasoning = result.get('reasoning', '')
+        event_summaries = result.get('event_summaries', [])
+        
+        if not matched_event_ids:
+            return jsonify({
+                "message": "No events found matching your criteria",
+                "matches": [],
+                "reasoning": reasoning
+            })
+        
+        # Return matches for user confirmation (don't delete yet!)
+        return jsonify({
+            "message": f"Found {len(matched_event_ids)} event(s) to delete",
+            "matches": matched_event_ids,
+            "event_summaries": event_summaries,
+            "reasoning": reasoning,
+            "requires_confirmation": True
+        })
+        
+    except Exception as e:
+        print(f"Intelligent delete error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Error processing delete request: {str(e)}"}), 500
 
 
 @app.route('/delete_event/<event_id>', methods=['DELETE'])

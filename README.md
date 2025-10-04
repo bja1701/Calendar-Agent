@@ -1,102 +1,121 @@
 # AI Academic Assistant
 
-A web-based AI assistant that helps you manage your academic schedule using natural language. Schedule events in your Google Calendar by typing commands and view all your tasks in a simple checklist with an interactive calendar view.
+An intelligent calendar management system that uses AI to help you schedule and organize your academic life through natural language commands.
 
-Uses Gemini 2.5 Flash model for natural language understanding and Google Calendar API for schedule management.
+## ✨ Highlights
 
-## Key Features
+- **🤖 Natural Language Scheduling** - "Schedule a meeting tomorrow at 2pm"
+- **�️ Intelligent Delete** - "Delete all side project events" with selective confirmation
+- **� Duration Learning** - Teach the AI how long your tasks take
+- **⚔️ Conflict Resolution** - AI-powered scheduling conflict management
+- **✂️ Task Splitting** - Automatically break large tasks into manageable blocks
+- **🔐 Google OAuth** - Seamless integration with Google Calendar
+- **📅 Interactive Calendar** - Full-featured calendar widget with multiple views
 
--   **🔐 Secure Authentication:** Email/password or Google OAuth sign-in
--   **👤 Session Management:** Persistent sessions with "Remember Me" (30 days)
--   **📅 Interactive Calendar:** Full calendar widget with timezone-aware scheduling
--   **🤖 Smart Conflict Detection:** Automatic conflict detection with AI-powered resolution
--   **📚 Proactive Study Planning:** AI analyzes your calendar and schedules study sessions automatically
--   **✍️ Task Splitting:** Intelligently splits long tasks into smaller time blocks
--   **🎯 Duration Learning:** Teach the AI how long your assignments take - it learns from your feedback!
--   **📝 Simple Event Scheduling:** "Schedule a meeting with my professor tomorrow at 10am"
--   **✅ Daily Task Checklist:** Automatically fetches today's events
--   **⚡ Enhanced Performance:** 30-day event caching for faster response
--   **� Modern UI:** Clean dashboard with visual feedback and animations
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
--   Python 3.7+
--   Docker (for production deployment)
--   Google Account with Calendar enabled
+- Python 3.7+
+- Docker (optional, for containerized deployment)
+- Google Account with Calendar enabled
+- Gemini API key ([Get one free](https://makersuite.google.com/app/apikey))
 
 ### Installation
 
-See **[SETUP.md](SETUP.md)** for complete setup instructions including:
-- Virtual environment creation
-- API credential configuration
-- Google Calendar authentication
-- OAuth setup
-- Docker deployment
+```bash
+# Clone and navigate to project
+cd Calendar-Agent
 
-### Basic Setup
+# Create virtual environment
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate # macOS/Linux
 
-1. **Install dependencies:**
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate  # Windows
-   pip install -r requirements.txt
-   ```
+# Install dependencies
+pip install -r requirements.txt
 
-2. **Configure credentials:**
-   - Create `credentials.json` (Google Calendar OAuth - see [SETUP.md](SETUP.md))
-   - Create `.env` file with `GEMINI_API_KEY`
+# Configure API keys
+echo "GEMINI_API_KEY=your_key_here" > .env
 
-3. **Authenticate:**
-   ```bash
-   python authenticate.py
-   ```
+# Authenticate with Google Calendar
+python authenticate.py
 
-4. **Run:**
-   ```bash
-   # Local development
-   python app.py
-   
-   # Production (Docker)
-   docker-compose up -d --build
-   ```
-
-5. **Access:** `http://localhost:5001`
-
-## Usage
-
-### First Time User
-
-1. Navigate to `http://localhost:5001`
-2. Click **"Create one"** to register
-3. Enter email and password
-4. Log in and start scheduling!
-
-### Basic Commands
-
-**Simple Scheduling:**
-```
-"Schedule a meeting tomorrow at 2pm for 1 hour"
-"Meet with professor next Tuesday at 10am"
+# Run the application
+python app.py
 ```
 
-**Smart Task Planning:**
+Access at: `http://localhost:5001`
+
+### Docker Deployment
+
+```bash
+docker-compose up -d --build
 ```
-"ECEN 380 homework due next Friday"
-"Work on CS project, due in 2 weeks"
+
+## 📖 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) folder:
+
+- **[Getting Started](docs/GETTING_STARTED.md)** - Installation and quick start guide
+- **[Configuration](docs/CONFIGURATION.md)** - API setup, OAuth, Docker, and Cloudflare configuration
+- **[API Reference](docs/API.md)** - Complete backend API endpoints documentation
+
+All features are documented inline in the [Getting Started](docs/GETTING_STARTED.md) guide.
+
+## 💡 Example Commands
+
+```bash
+# Simple scheduling
+"Schedule a meeting with professor tomorrow at 10am"
+
+# Smart task planning
+"Work on CS project, due next Friday"
+
+# Intelligent bulk delete
+"Delete all side project events"
+
+# Duration learning
+"ECEN 380 homework takes 4-5 hours"
 ```
 
-**Duration Learning:**
-1. Click **"📚 Teach Duration Patterns"**
-2. Type: `"ECEN 380 homework takes 4-5 hours"`
-3. AI remembers and uses this for future scheduling!
+## 🎯 Key Features
 
-## Documentation
+### Natural Language Scheduling
+Type commands like "Schedule a study session tomorrow at 2pm for 2 hours" and watch the AI create your event automatically.
 
-- **[SETUP.md](SETUP.md)** - Complete setup and configuration guide
-- **[FEATURES.md](FEATURES.md)** - Detailed feature documentation and usage examples
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+### Intelligent Delete
+Use natural language to find and delete multiple events. The AI shows you what it found, you select which to keep, and confirm before deletion.
+
+### Duration Learning
+Teach the AI once how long your assignments take, and it remembers for future scheduling. "CS 101 projects take 8 hours" - the AI learns and applies this knowledge.
+
+### Conflict Detection
+Automatic detection of scheduling conflicts with AI-powered suggestions for alternative times or task splitting.
+
+### Google Calendar Sync
+Seamless two-way sync with Google Calendar. Events appear in both the app and your Google Calendar instantly.
+
+## 🛠️ Technology Stack
+
+- **Backend:** Flask (Python)
+- **AI:** Google Gemini 2.5 Flash
+- **Calendar:** Google Calendar API
+- **Frontend:** Vanilla JS, FullCalendar
+- **Deployment:** Docker, Docker Compose
+- **Authentication:** OAuth 2.0, Bcrypt
+
+## 📝 License
+
+This project is for educational purposes.
+
+## 🤝 Contributing
+
+This is an academic project. Feel free to fork and modify for your own use.
+
+## 📞 Support
+
+Having issues? Review the [Configuration Guide](docs/CONFIGURATION.md) for setup help or the [API Reference](docs/API.md) for endpoint details.
 
 ## Features Overview
 

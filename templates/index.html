@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>AI Academic Assistant</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=3.5">
     <!-- FullCalendar CSS -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
     <!-- Google Fonts -->
@@ -170,6 +170,34 @@
                 </div>
             </div>
 
+            <!-- Intelligent Delete Card -->
+            <div class="card delete-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="trash-2"></i>
+                        <span>Smart Delete</span>
+                    </div>
+                    <div class="card-badge badge-danger">AI-Powered</div>
+                </div>
+                <div class="card-content">
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <i data-lucide="search" class="input-icon"></i>
+                            <input type="text" 
+                                   id="delete-input" 
+                                   class="smart-input"
+                                   placeholder="Try: 'Delete all side project events' or 'Remove all meetings next week'"
+                                   autocomplete="off">
+                        </div>
+                        <button id="delete-button" class="primary-btn btn-danger">
+                            <span class="btn-text">Find & Delete</span>
+                            <i data-lucide="search" class="btn-icon"></i>
+                        </button>
+                    </div>
+                    <div id="delete-status" class="status-message"></div>
+                </div>
+            </div>
+
             <!-- Calendar Card -->
             <div class="card calendar-card">
                 <div class="card-header">
@@ -187,6 +215,10 @@
                     </div>
                 </div>
                 <div class="card-content">
+                    <div class="calendar-help-text">
+                        <i data-lucide="info"></i>
+                        <span><strong>Tip:</strong> Click on any event in the calendar to view details or delete it.</span>
+                    </div>
                     <div id="calendar" class="calendar-wrapper"></div>
                 </div>
             </div>
@@ -222,7 +254,7 @@
 
     <!-- FullCalendar JS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=3.5"></script>
     
     <!-- Initialize Lucide Icons -->
     <script>
