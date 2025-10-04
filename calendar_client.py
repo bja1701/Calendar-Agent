@@ -206,3 +206,20 @@ def update_event(event_id, new_start_time, new_end_time):
     except HttpError as error:
         print(f"An error occurred while updating event: {error}")
         return None
+
+
+def delete_event(event_id):
+    """
+    Deletes an event from the user's primary calendar.
+    """
+    service = get_calendar_service()
+    if not service:
+        return None
+
+    try:
+        service.events().delete(calendarId="primary", eventId=event_id).execute()
+        print(f"Event deleted successfully: {event_id}")
+        return True
+    except HttpError as error:
+        print(f"An error occurred while deleting event: {error}")
+        return False

@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>AI Academic Assistant</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.0">
     <!-- FullCalendar CSS -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
     <!-- Google Fonts -->
@@ -31,6 +34,14 @@
                     <span class="stat-label">Today's Events</span>
                     <span class="stat-value" id="event-count">0</span>
                 </div>
+                {% if user %}
+                <div class="user-info">
+                    <span class="user-email">{{ user.email }}</span>
+                    <a href="/logout" class="btn-logout" title="Logout">
+                        <i data-lucide="log-out"></i>
+                    </a>
+                </div>
+                {% endif %}
                 <div class="status-indicator" id="connection-status">
                     <i data-lucide="wifi"></i>
                 </div>
@@ -100,7 +111,61 @@
                                 <i data-lucide="file-text"></i>
                                 <span>Assignment</span>
                             </button>
+                            <button id="teach-feedback-btn" class="quick-action-btn feedback-btn" style="grid-column: span 2;">
+                                <i data-lucide="graduation-cap"></i>
+                                <span>📚 Teach Duration Patterns</span>
+                            </button>
                         </div>
+                    </div>
+                    
+                    <!-- Feedback Section (hidden by default) -->
+                    <div id="feedback-section" class="feedback-section" style="display: none;">
+                        <h4 class="feedback-title">💡 Teach Me About Your Assignments</h4>
+                        <p class="feedback-description">Help me learn how long your assignments typically take!</p>
+                        
+                        <div class="feedback-input-container">
+                            <textarea id="feedback-input" 
+                                      class="feedback-textarea"
+                                      placeholder="Example: 'ECEN 380 homework always takes 4-5 hours' or 'CS projects usually need 6 hours'"
+                                      rows="3"></textarea>
+                            <div class="feedback-buttons">
+                                <button id="submit-feedback-btn" class="primary-btn">
+                                    <span>✓ Teach AI</span>
+                                </button>
+                                <button id="view-feedback-btn" class="secondary-btn">
+                                    <span>View Learned Patterns</span>
+                                </button>
+                                <button id="close-feedback-btn" class="cancel-btn">
+                                    <span>Close</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="feedback-status" class="status-message"></div>
+                    </div>
+                    
+                    <!-- Advanced Feedback Form (for structured input) -->
+                    <div id="structured-feedback" class="structured-feedback" style="display: none;">
+                        <h4>Structured Feedback</h4>
+                        <div class="form-group">
+                            <label>Class Name (e.g., ECEN 380)</label>
+                            <input type="text" id="class-name-input" placeholder="ECEN 380">
+                        </div>
+                        <div class="form-group">
+                            <label>Assignment Type</label>
+                            <select id="assignment-type-select">
+                                <option value="homework">Homework</option>
+                                <option value="project">Project</option>
+                                <option value="lab">Lab</option>
+                                <option value="paper">Paper/Essay</option>
+                                <option value="reading">Reading</option>
+                                <option value="exam">Exam Prep</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Typical Duration (hours)</label>
+                            <input type="number" id="duration-input" placeholder="4.5" step="0.5" min="0.5">
+                        </div>
+                        <button id="submit-structured-btn" class="primary-btn">Save Pattern</button>
                     </div>
                 </div>
             </div>
@@ -157,9 +222,14 @@
 
     <!-- FullCalendar JS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.0"></script>
     
     <!-- Initialize Lucide Icons -->
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+        // Debug: Check if feedback elements exist
+        console.log('Feedback button:', document.getElementById('teach-feedback-btn'));
+        console.log('Feedback section:', document.getElementById('feedback-section'));
+    </script>
 </body>
 </html>

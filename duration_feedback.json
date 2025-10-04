@@ -1,0 +1,31 @@
+{
+  "class_patterns": {
+    "ECEN 380": {
+      "homework": {
+        "typical_duration_hours": 4.5,
+        "notes": "ECEN 380 Homework will always take 4-5 hours.",
+        "updated_at": "2025-10-03T16:43:35.943802"
+      }
+    },
+    "CS 220": {
+      "project": {
+        "typical_duration_hours": 6.0,
+        "notes": "CS 220 projects need 6 hours",
+        "updated_at": "2025-10-03T16:25:31.067651"
+      }
+    }
+  },
+  "assignment_type_patterns": {
+    "lab": {
+      "typical_duration_hours": 2.0,
+      "notes": "Lab reports typically take 2 hours",
+      "updated_at": "2025-10-03T16:26:12.729729"
+    }
+  },
+  "general_feedback": [
+    {
+      "text": "Test feedback with enhanced UI",
+      "added_at": "2025-10-03T16:34:30.849136"
+    }
+  ]
+}

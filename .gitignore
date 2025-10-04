@@ -18,3 +18,7 @@ credentials.json
 .vscode/
 .idea/
 *.DS_Store
+
+# Docker self host
+docker-compose.yaml
+Dockerfile

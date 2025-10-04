@@ -1,115 +1,104 @@
 # AI Academic Assistant
 
-This project is a web-based AI assistant that helps you manage your academic schedule using natural language. You can schedule events in your Google Calendar by typing commands and view all of your tasks for the day in a simple checklist with an interactive calendar view.
+A web-based AI assistant that helps you manage your academic schedule using natural language. Schedule events in your Google Calendar by typing commands and view all your tasks in a simple checklist with an interactive calendar view.
 
-The application uses the Gemini 2.5 Flash model to understand your commands and the Google Calendar API to manage your schedule. It features intelligent conflict detection and AI-powered resolution suggestions to help you manage scheduling conflicts effectively.
+Uses Gemini 2.5 Flash model for natural language understanding and Google Calendar API for schedule management.
 
-## Features
+## Key Features
 
--   **Interactive Calendar View:** Full calendar widget displaying all your events with timezone-aware scheduling
--   **Smart Conflict Detection:** Automatically detects scheduling conflicts and offers intelligent resolution options
--   **AI-Powered Conflict Resolution:** Get smart suggestions for resolving conflicts by moving either new or existing events
--   **Proactive Study Planning:** Give the assistant a task with a deadline (e.g., "History paper due next Friday"), and it will analyze your calendar for free time and automatically schedule multiple, focused study sessions for you.
--   **Simple Event Scheduling:** Still supports simple, direct scheduling like "Schedule a meeting with my professor tomorrow at 10am".
--   **Daily Task Checklist:** Automatically fetches and displays all events from your Google Calendar for the current day.
--   **Enhanced Performance:** 30-day event caching for improved responsiveness and reduced API calls
--   **Timezone Intelligence:** Proper timezone handling for accurate event scheduling and display
--   **Simple Web Interface:** A clean and modern dashboard with enhanced UI for managing your schedule.
+-   **🔐 Secure Authentication:** Email/password or Google OAuth sign-in
+-   **👤 Session Management:** Persistent sessions with "Remember Me" (30 days)
+-   **📅 Interactive Calendar:** Full calendar widget with timezone-aware scheduling
+-   **🤖 Smart Conflict Detection:** Automatic conflict detection with AI-powered resolution
+-   **📚 Proactive Study Planning:** AI analyzes your calendar and schedules study sessions automatically
+-   **✍️ Task Splitting:** Intelligently splits long tasks into smaller time blocks
+-   **🎯 Duration Learning:** Teach the AI how long your assignments take - it learns from your feedback!
+-   **📝 Simple Event Scheduling:** "Schedule a meeting with my professor tomorrow at 10am"
+-   **✅ Daily Task Checklist:** Automatically fetches today's events
+-   **⚡ Enhanced Performance:** 30-day event caching for faster response
+-   **� Modern UI:** Clean dashboard with visual feedback and animations
 
-## Prerequisites
+## Quick Start
+
+### Prerequisites
 
 -   Python 3.7+
--   A Google Account with Google Calendar enabled.
+-   Docker (for production deployment)
+-   Google Account with Calendar enabled
 
-## Setup and Configuration
+### Installation
 
-Follow these steps to get the application running on your local machine.
+See **[SETUP.md](SETUP.md)** for complete setup instructions including:
+- Virtual environment creation
+- API credential configuration
+- Google Calendar authentication
+- OAuth setup
+- Docker deployment
 
-### 1. Install Dependencies
+### Basic Setup
 
-First, it's recommended to create a virtual environment to keep the project's dependencies isolated.
+1. **Install dependencies:**
+   ```bash
+   python -m venv venv
+   .\venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   ```
 
-```bash
-# Create a virtual environment
-python -m venv venv
+2. **Configure credentials:**
+   - Create `credentials.json` (Google Calendar OAuth - see [SETUP.md](SETUP.md))
+   - Create `.env` file with `GEMINI_API_KEY`
 
-# Activate the virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-.\venv\Scripts\activate
+3. **Authenticate:**
+   ```bash
+   python authenticate.py
+   ```
+
+4. **Run:**
+   ```bash
+   # Local development
+   python app.py
+   
+   # Production (Docker)
+   docker-compose up -d --build
+   ```
+
+5. **Access:** `http://localhost:5001`
+
+## Usage
+
+### First Time User
+
+1. Navigate to `http://localhost:5001`
+2. Click **"Create one"** to register
+3. Enter email and password
+4. Log in and start scheduling!
+
+### Basic Commands
+
+**Simple Scheduling:**
+```
+"Schedule a meeting tomorrow at 2pm for 1 hour"
+"Meet with professor next Tuesday at 10am"
 ```
 
-Once your virtual environment is active, install the required Python packages:
-
-```bash
-pip install -r requirements.txt
+**Smart Task Planning:**
+```
+"ECEN 380 homework due next Friday"
+"Work on CS project, due in 2 weeks"
 ```
 
-### 2. Configure API Credentials
+**Duration Learning:**
+1. Click **"📚 Teach Duration Patterns"**
+2. Type: `"ECEN 380 homework takes 4-5 hours"`
+3. AI remembers and uses this for future scheduling!
 
-The application requires two sets of credentials to function: one for the Google Calendar API and one for the Gemini API.
+## Documentation
 
-#### **A. Google Calendar API (`credentials.json`)**
+- **[SETUP.md](SETUP.md)** - Complete setup and configuration guide
+- **[FEATURES.md](FEATURES.md)** - Detailed feature documentation and usage examples
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
 
-1.  Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2.  Create a new project (or select an existing one).
-3.  From the navigation menu, go to **APIs & Services > Library**.
-4.  Search for and enable the **"Google Calendar API"**.
-5.  Once enabled, go to **APIs & Services > Credentials**.
-6.  Click **+ CREATE CREDENTIALS** and select **OAuth client ID**.
-7.  You may be prompted to configure the **OAuth consent screen**.
-    -   Choose **External** and click **Create**.
-    -   Fill in the required fields (App name, User support email, Developer contact information). You can leave the rest blank for now. Click **Save and Continue** through the Scopes and Test Users sections.
-8.  Go back to **Credentials**. Click **+ CREATE CREDENTIALS > OAuth client ID** again.
-9.  For the **Application type**, select **Desktop app**.
-10. Give it a name (e.g., "AI Calendar Assistant Client") and click **Create**.
-11. A window will pop up with your credentials. Click **DOWNLOAD JSON**.
-12. **Important:** Rename the downloaded file to `credentials.json` and place it in the root directory of this project.
-
-#### **B. Gemini API Key (`.env` file)**
-
-1.  Go to [Google AI Studio](https://aistudio.google.com/app/apikey) and click **"Create API key"**.
-2.  Copy your generated API key.
-3.  In the root directory of this project, create a new file named `.env`.
-4.  Add the following line to the `.env` file, replacing `"YOUR_API_KEY"` with the key you just copied:
-
-    ```
-    GEMINI_API_KEY="YOUR_API_KEY"
-    ```
-
-### 3. Running the Application
-
-With the setup and configuration complete, you can now run the application.
-
-1.  **First-Time Run (Authorization):**
-    Run the main application file from your terminal:
-    ```bash
-    python3 app.py
-    ```
-    -   The server will start and wait for requests. It will not print anything immediately.
-    -   Next, open your web browser and navigate to `http://127.0.0.1:5001`.
-    -   The page will attempt to load your tasks. At this point, check your terminal. The application now needs to authenticate and will print the authorization URL.
-    -   **Copy this entire URL from your terminal.**
-    -   Paste the URL into a web browser on your local machine.
-    -   Log in to the Google account you want the assistant to manage.
-    -   Grant the application permission to access your calendar by clicking "Allow" or "Continue".
-    -   **Important:** After you grant permission, the next page will show a heading like "Sign in to AI Calendar Assistant Client" and will display the authorization code. It is a long string of characters. **Copy this entire code.**
-    -   **Paste the code back into your terminal** where the application is waiting and press Enter.
-    -   The application will then create a `token.json` file to store your credentials. You will only need to do this once.
-
-2.  **Subsequent Runs:**
-    For all future runs, the application will use the `token.json` file, so you won't need to log in again. Simply run:
-    ```bash
-    python app.py
-    ```
-
-### 4. How to Use
-
-1.  Open your web browser and navigate to `http://127.0.0.1:5001`.
-2.  The dashboard will automatically load and display your checklist for today along with a full calendar view.
-
-## Features
+## Features Overview
 
 ### **Calendar View Widget**
 The application now includes a full interactive calendar widget that displays:
@@ -217,12 +206,48 @@ pip install -r requirements.txt
 - Make sure existing events have proper start/end times
 - All-day events are treated differently and may not trigger conflicts
 
-### **Performance Notes**
-- Events are cached for 24 hours to improve performance
-- The calendar widget loads up to 30 days of events by default
-- Large calendars (>100 events/month) may experience slower load times
+### Duration Learning System
 
-### **Privacy & Security**
-- All calendar data is processed locally and temporarily cached
-- API credentials are stored securely in local files
-- No user data is transmitted to external services except Google Calendar and Gemini APIs
+Teach the AI how long your assignments typically take:
+
+1. Click **"📚 Teach Duration Patterns"**
+2. Type feedback: `"ECEN 380 homework takes 4-5 hours"`
+3. AI extracts and remembers: Class (ECEN 380), Type (homework), Duration (4.5 hrs)
+4. Future scheduling uses learned durations automatically
+
+**Visual Feedback:**
+- 🟠 Orange pulse = Processing
+- 🟢 Green flash = Success with extracted info
+- 🔴 Red shake = Error
+
+See **[FEATURES.md](FEATURES.md)** for detailed examples and usage patterns.
+
+### Conflict Management
+
+When conflicts are detected:
+1. AI shows conflicting events
+2. Suggests resolutions (move new event, move existing event, or split task)
+3. One-click resolution
+4. Automatic calendar updates
+
+### Task Splitting
+
+AI automatically splits long tasks into smaller blocks:
+- Analyzes your available free time
+- Creates multiple focused study sessions
+- Optimizes based on learned duration patterns
+- Spreads work across multiple days if needed
+
+## Performance & Security
+
+**Performance:**
+- 30-day event caching for faster load times
+- Smart background syncing
+- Optimized API calls
+
+**Security:**
+- Password hashing (PBKDF2-SHA256)
+- Secure session tokens (32-byte cryptographic)
+- OAuth 2.0 standard implementation
+- Credentials never stored in plaintext
+- No data transmitted except to Google APIs
