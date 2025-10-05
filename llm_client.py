@@ -109,6 +109,22 @@ def generate_study_plan(user_text, calendar_events):
     - "end_time": The end time in ISO 8601 format.
     - "is_split": (optional) true if this is part of a split task, false or omitted otherwise
     - "split_info": (optional) a description like "Part 1 of 3" if this is a split task
+    - "recurrence": (optional) object with recurrence pattern if this is a recurring event:
+        {{
+            "frequency": "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
+            "interval": 1 (every X frequency units, e.g., 2 for every 2 weeks),
+            "count": number (how many occurrences, e.g., 10 for 10 meetings),
+            "until": "YYYY-MM-DD" (end date, alternative to count),
+            "by_day": ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] (for weekly recurring)
+        }}
+    
+    **Recurring Event Detection:**
+    - Detect phrases like "every Monday", "weekly", "daily standup", "bi-weekly", "monthly"
+    - If user says "every Monday at 2pm", create a recurring event with frequency=WEEKLY, by_day=["MO"]
+    - If user says "for the next 4 weeks", use count=4
+    - If user says "until December", use until date
+    - If user says "for 2 months", calculate count based on frequency (e.g., 8 for weekly over 2 months)
+    - Default recurring events to 10 occurrences if no end specified
     """
 
     try:

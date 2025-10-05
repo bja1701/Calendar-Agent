@@ -16,7 +16,7 @@ import calendar_client
 import duration_feedback
 import auth
 from auth import login_required, get_current_user
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_urlsafe(32))
@@ -35,11 +35,60 @@ app.config['PREFERRED_URL_SCHEME'] = 'https'
 # NEW: Define a cache with max size 100 and TTL of 24 hours (86400 seconds) for daily updates
 cache = TTLCache(maxsize=100, ttl=86400)
 
-# NEW: Cached wrapper for fetching events
+# NEW: Cached wrapper for fetching events (extended to 90 days for recurring events)
 @cached(cache)
 def get_cached_events():
     print("Fetching fresh calendar events (cache miss)...")
-    return calendar_client.get_events_in_range(days_in_future=30)
+    return calendar_client.get_events_in_range(days_in_future=90)
+
+def build_recurrence_rule(recurrence_obj):
+    """
+    Converts a recurrence object from the LLM into Google Calendar RRULE format.
+    
+    Args:
+        recurrence_obj: Dictionary with keys like frequency, interval, count, until, by_day
+        
+    Returns:
+        List with single RRULE string, e.g., ['RRULE:FREQ=WEEKLY;COUNT=10;BYDAY=MO']
+    """
+    if not recurrence_obj:
+        return None
+    
+    frequency = recurrence_obj.get('frequency', 'WEEKLY').upper()
+    interval = recurrence_obj.get('interval', 1)
+    count = recurrence_obj.get('count')
+    until = recurrence_obj.get('until')
+    by_day = recurrence_obj.get('by_day', [])
+    
+    # Build RRULE string
+    rrule_parts = [f"FREQ={frequency}"]
+    
+    if interval > 1:
+        rrule_parts.append(f"INTERVAL={interval}")
+    
+    # Use count OR until, not both (count takes precedence)
+    if count:
+        rrule_parts.append(f"COUNT={count}")
+    elif until:
+        # Convert until date to RRULE format (YYYYMMDD)
+        try:
+            until_dt = datetime.fromisoformat(until)
+            until_formatted = until_dt.strftime("%Y%m%d")
+            rrule_parts.append(f"UNTIL={until_formatted}T235959Z")
+        except ValueError:
+            # If date parsing fails, default to 10 occurrences
+            rrule_parts.append("COUNT=10")
+    else:
+        # Default to 10 occurrences if neither count nor until specified
+        rrule_parts.append("COUNT=10")
+    
+    # Add day of week for weekly recurrence
+    if frequency == 'WEEKLY' and by_day:
+        by_day_str = ",".join(by_day)
+        rrule_parts.append(f"BYDAY={by_day_str}")
+    
+    rrule = "RRULE:" + ";".join(rrule_parts)
+    return [rrule]
 
 # Authentication Routes
 @app.route('/login', methods=['GET', 'POST'])
@@ -251,21 +300,94 @@ def index():
     user = get_current_user()
     return render_template('index.html', user=user)
 
+@app.route('/check_recurring', methods=['POST'])
+@login_required
+def check_recurring():
+    """
+    Analyzes text to detect if it's a recurring event request.
+    Returns suggested recurrence pattern for user confirmation.
+    """
+    data = request.get_json()
+    text_input = data.get('text', '').lower()
+    
+    # Check for recurring keywords
+    recurring_keywords = ['every', 'weekly', 'daily', 'monthly', 'bi-weekly', 'recurring']
+    is_recurring = any(keyword in text_input for keyword in recurring_keywords)
+    
+    if not is_recurring:
+        return jsonify({"is_recurring": False})
+    
+    # Try to detect pattern using simple rules
+    pattern = {
+        "is_recurring": True,
+        "frequency": "WEEKLY",
+        "count": 10,
+        "by_day": []
+    }
+    
+    # Detect frequency
+    if 'daily' in text_input or 'every day' in text_input:
+        pattern["frequency"] = "DAILY"
+    elif 'monthly' in text_input:
+        pattern["frequency"] = "MONTHLY"
+    elif 'yearly' in text_input or 'annual' in text_input:
+        pattern["frequency"] = "YEARLY"
+    
+    # Detect interval
+    if 'bi-weekly' in text_input or 'every other week' in text_input or 'every 2 weeks' in text_input:
+        pattern["frequency"] = "WEEKLY"
+        pattern["interval"] = 2
+    
+    # Detect days of week
+    days_map = {
+        'monday': 'MO', 'tuesday': 'TU', 'wednesday': 'WE',
+        'thursday': 'TH', 'friday': 'FR', 'saturday': 'SA', 'sunday': 'SU'
+    }
+    for day_name, day_code in days_map.items():
+        if day_name in text_input:
+            pattern["by_day"].append(day_code)
+    
+    # Detect count/duration
+    import re
+    # Look for "for X weeks/months/days"
+    count_match = re.search(r'for (\d+) (week|month|day)', text_input)
+    if count_match:
+        number = int(count_match.group(1))
+        unit = count_match.group(2)
+        if unit == 'week' and pattern["frequency"] == "WEEKLY":
+            pattern["count"] = number
+        elif unit == 'month':
+            if pattern["frequency"] == "WEEKLY":
+                pattern["count"] = number * 4  # Approximate weeks per month
+            elif pattern["frequency"] == "MONTHLY":
+                pattern["count"] = number
+        elif unit == 'day' and pattern["frequency"] == "DAILY":
+            pattern["count"] = number
+    
+    # Look for "X times"
+    times_match = re.search(r'(\d+) times', text_input)
+    if times_match:
+        pattern["count"] = int(times_match.group(1))
+    
+    return jsonify(pattern)
+
 @app.route('/schedule', methods=['POST'])
 @login_required
 def schedule():
     """
     Receives a high-level task, generates a study plan, and schedules multiple events.
+    Supports recurring events with user-confirmed recurrence parameters.
     """
     data = request.get_json()
     text_input = data.get('text')
+    user_recurrence = data.get('recurrence')  # User-confirmed recurrence from popup
 
     if not text_input:
         return jsonify({"error": "No text provided"}), 400
 
-    # 1. Fetch calendar context
+    # 1. Fetch calendar context (extended to 90 days for recurring events)
     print("Fetching calendar events to provide context to the planner...")
-    upcoming_events = get_cached_events()  # CHANGED: Use cached function
+    upcoming_events = calendar_client.get_events_in_range(days_in_future=90)
 
     # 2. Call the AI planner to generate a study plan
     print("Sending request to the AI planner...")
@@ -325,8 +447,16 @@ def schedule():
             print(f"Conflict detected for event: {summary}")
             continue
 
+        # Check if this is a recurring event
+        # Priority: user_recurrence (from popup) > event_details recurrence (from LLM)
+        recurrence_rules = None
+        if user_recurrence:
+            recurrence_rules = build_recurrence_rule(user_recurrence)
+        elif 'recurrence' in event_details:
+            recurrence_rules = build_recurrence_rule(event_details['recurrence'])
+        
         # Create the event if no conflicts
-        created_event = calendar_client.create_event(summary, start_time, end_time)
+        created_event = calendar_client.create_event(summary, start_time, end_time, recurrence=recurrence_rules)
         if created_event:
             created_count += 1
 

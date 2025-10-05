@@ -146,9 +146,17 @@ def get_daily_events():
         return []
 
 
-def create_event(summary, start_time, end_time, timezone="UTC"):
+def create_event(summary, start_time, end_time, timezone="UTC", recurrence=None):
     """
     Creates an event on the user's primary calendar.
+    
+    Args:
+        summary: Event title
+        start_time: ISO format start time
+        end_time: ISO format end time
+        timezone: Timezone (default: UTC)
+        recurrence: List of RRULE strings for recurring events
+                   Example: ['RRULE:FREQ=WEEKLY;COUNT=10;BYDAY=MO']
     """
     service = get_calendar_service()
     if not service:
@@ -162,6 +170,10 @@ def create_event(summary, start_time, end_time, timezone="UTC"):
         "start": {"dateTime": start_time, "timeZone": actual_timezone},
         "end": {"dateTime": end_time, "timeZone": actual_timezone},
     }
+    
+    # Add recurrence rules if provided
+    if recurrence:
+        event["recurrence"] = recurrence
 
     try:
         created_event = (
@@ -169,7 +181,10 @@ def create_event(summary, start_time, end_time, timezone="UTC"):
             .insert(calendarId="primary", body=event)
             .execute()
         )
-        print(f"Event created: {created_event.get('htmlLink')}")
+        if recurrence:
+            print(f"Recurring event created: {created_event.get('htmlLink')}")
+        else:
+            print(f"Event created: {created_event.get('htmlLink')}")
         return created_event
     except HttpError as error:
         print(f"An error occurred: {error}")

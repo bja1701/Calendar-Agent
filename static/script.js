@@ -900,6 +900,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // First, check if this might be a recurring event
+        try {
+            const checkResponse = await fetch('/check_recurring', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text }),
+            });
+
+            const pattern = await checkResponse.json();
+
+            if (pattern.is_recurring) {
+                // Show recurring event popup
+                showRecurringEventPopup(text, pattern);
+                return;
+            }
+        } catch (error) {
+            console.log('Error checking for recurring pattern, proceeding with normal scheduling');
+        }
+
+        // If not recurring, proceed with normal scheduling
+        scheduleEvent(text, null);
+    });
+
+    // Function to actually schedule the event
+    const scheduleEvent = async (text, recurrence) => {
         scheduleButton.disabled = true;
         scheduleButton.classList.add('loading');
         scheduleButton.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Scheduling...';
@@ -914,7 +941,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ text: text }),
+                body: JSON.stringify({ 
+                    text: text,
+                    recurrence: recurrence 
+                }),
             });
 
             const result = await response.json();
@@ -949,7 +979,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lucide.createIcons();
             }
         }
-    });
+    };
 
     // --- Event Listeners ---
     refreshTasksButton.addEventListener('click', () => {
@@ -963,6 +993,159 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleButton.click();
         }
     });
+
+    // Show recurring event configuration popup
+    const showRecurringEventPopup = (text, suggestedPattern) => {
+        const modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = `
+            <div class="confirmation-content recurring-popup">
+                <div class="confirmation-icon warning">
+                    <i data-lucide="repeat"></i>
+                </div>
+                <h3>Configure Recurring Event</h3>
+                <p style="margin-bottom: 1.5rem;">This looks like a recurring event. Configure the recurrence pattern:</p>
+                
+                <div class="recurring-form">
+                    <div class="form-group">
+                        <label for="frequency-select">Repeat:</label>
+                        <select id="frequency-select" class="recurring-select">
+                            <option value="DAILY" ${suggestedPattern.frequency === 'DAILY' ? 'selected' : ''}>Daily</option>
+                            <option value="WEEKLY" ${suggestedPattern.frequency === 'WEEKLY' ? 'selected' : ''}>Weekly</option>
+                            <option value="MONTHLY" ${suggestedPattern.frequency === 'MONTHLY' ? 'selected' : ''}>Monthly</option>
+                            <option value="YEARLY" ${suggestedPattern.frequency === 'YEARLY' ? 'selected' : ''}>Yearly</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="interval-group">
+                        <label for="interval-input">Every:</label>
+                        <input type="number" id="interval-input" class="recurring-input" min="1" value="${suggestedPattern.interval || 1}">
+                        <span id="interval-unit">week(s)</span>
+                    </div>
+                    
+                    <div class="form-group" id="days-group" style="${suggestedPattern.frequency === 'WEEKLY' ? '' : 'display: none;'}">
+                        <label>Days of week:</label>
+                        <div class="days-selector">
+                            ${['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map((day, idx) => `
+                                <label class="day-checkbox">
+                                    <input type="checkbox" value="${day}" ${suggestedPattern.by_day && suggestedPattern.by_day.includes(day) ? 'checked' : ''}>
+                                    <span>${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][idx]}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end-type">End:</label>
+                        <select id="end-type" class="recurring-select">
+                            <option value="count" selected>After number of occurrences</option>
+                            <option value="until">On date</option>
+                            <option value="never">Never</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="count-group">
+                        <label for="count-input">Number of times:</label>
+                        <input type="number" id="count-input" class="recurring-input" min="1" max="365" value="${suggestedPattern.count || 10}">
+                    </div>
+                    
+                    <div class="form-group" id="until-group" style="display: none;">
+                        <label for="until-input">End date:</label>
+                        <input type="date" id="until-input" class="recurring-input">
+                    </div>
+                </div>
+                
+                <div class="confirmation-actions">
+                    <button class="cancel-btn" id="cancel-recurring-btn">
+                        <i data-lucide="x"></i>
+                        Cancel
+                    </button>
+                    <button class="primary-btn" id="schedule-once-btn">
+                        <i data-lucide="calendar"></i>
+                        Schedule Once Only
+                    </button>
+                    <button class="confirm-delete-btn" id="confirm-recurring-btn">
+                        <i data-lucide="repeat"></i>
+                        Create Recurring Event
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        // Handle frequency change
+        const frequencySelect = document.getElementById('frequency-select');
+        const intervalUnit = document.getElementById('interval-unit');
+        const daysGroup = document.getElementById('days-group');
+        
+        frequencySelect.addEventListener('change', () => {
+            const freq = frequencySelect.value;
+            intervalUnit.textContent = freq === 'DAILY' ? 'day(s)' : freq === 'WEEKLY' ? 'week(s)' : freq === 'MONTHLY' ? 'month(s)' : 'year(s)';
+            daysGroup.style.display = freq === 'WEEKLY' ? '' : 'none';
+        });
+
+        // Handle end type change
+        const endType = document.getElementById('end-type');
+        const countGroup = document.getElementById('count-group');
+        const untilGroup = document.getElementById('until-group');
+        
+        endType.addEventListener('change', () => {
+            countGroup.style.display = endType.value === 'count' ? '' : 'none';
+            untilGroup.style.display = endType.value === 'until' ? '' : 'none';
+        });
+
+        // Handle cancel
+        document.getElementById('cancel-recurring-btn').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        // Handle schedule once
+        document.getElementById('schedule-once-btn').addEventListener('click', () => {
+            modal.remove();
+            scheduleEvent(text, null);
+        });
+
+        // Handle confirm recurring
+        document.getElementById('confirm-recurring-btn').addEventListener('click', () => {
+            const recurrence = {
+                frequency: frequencySelect.value,
+                interval: parseInt(document.getElementById('interval-input').value) || 1
+            };
+
+            // Get days of week for weekly events
+            if (frequencySelect.value === 'WEEKLY') {
+                const checkedDays = Array.from(document.querySelectorAll('.day-checkbox input:checked'))
+                    .map(cb => cb.value);
+                if (checkedDays.length > 0) {
+                    recurrence.by_day = checkedDays;
+                }
+            }
+
+            // Get end condition
+            const endTypeValue = endType.value;
+            if (endTypeValue === 'count') {
+                recurrence.count = parseInt(document.getElementById('count-input').value) || 10;
+            } else if (endTypeValue === 'until') {
+                recurrence.until = document.getElementById('until-input').value;
+            } else {
+                // Never - set to 365 occurrences
+                recurrence.count = 365;
+            }
+
+            modal.remove();
+            scheduleEvent(text, recurrence);
+        });
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    };
 
     // --- Intelligent Delete System ---
     const deleteInput = document.getElementById('delete-input');
